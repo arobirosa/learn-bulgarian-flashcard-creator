@@ -20,12 +20,12 @@
 # the configuration file.
 
 import configparser
-from getpass import getpass
-from mysql.connector import connect, Error
-import urllib.request
 import gzip
-import shutil
 import tempfile
+import urllib.request
+from getpass import getpass
+
+from mysql.connector import connect, Error
 
 # TODO Add logging replacing the print calls
 
@@ -35,6 +35,18 @@ CONFIG_FILENAME = 'configuration.ini'
 GRAMMATICAL_DATABASE_URL = 'https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sql.gz'
 
 
+def run_sql_statement_using_config(sql_statement : str):
+    config = configparser.ConfigParser(interpolation=None)
+    config.read(CONFIG_FILENAME)
+    with connect(host=config['GrammaticalDictionary']['Host'], port=int(config['GrammaticalDictionary']['Port']), user=config['GrammaticalDictionary']['User'], \
+            password=config['GrammaticalDictionary']['Password'],database=config['GrammaticalDictionary']['Database']) as db_connection:
+        with db_connection.cursor() as db_cursor:
+            db_cursor.execute(sql_statement)
+            return db_cursor.rowcount
+    return -1;
+
+
+
 def create_database_configuration():
     """
     Asks for the database parameters and saves the configuration on disk if the connection was successful
@@ -42,7 +54,7 @@ def create_database_configuration():
     """
     config = configparser.ConfigParser(interpolation=None)
     config.read(CONFIG_FILENAME)
-    if 'GrammaticalDictionary.User' in config:
+    if 'GrammaticalDictionary' in config and config['GrammaticalDictionary'].get('User'):
         print('The connection to the database containing the grammatical dictionary was already configured')
         return True
 
@@ -55,6 +67,10 @@ def create_database_configuration():
         database_port = int(database_port_str)
     else:
         database_port = 3306
+    database_name=input('Please enter the name of the database: ')
+    if not database_name:
+        print('No database''s name was entered. Exiting')
+        return False
     database_user=input('Please enter the username: ')
     if not database_user:
         print('No user was entered. Exiting')
@@ -66,7 +82,7 @@ def create_database_configuration():
 
     print('Attempting to connect to the database server')
     try:
-        with connect(host=database_host, port=database_port, user=database_user, password=database_password):
+        with connect(host=database_host, port=database_port, user=database_user, password=database_password, database=database_name):
             print('Connection SUCCESSFUL.')
     except Error as e:
         print('The connection failed:', e)
@@ -74,9 +90,10 @@ def create_database_configuration():
 
     print("Saving the database connection information in the configuration file")
     config.add_section("GrammaticalDictionary")
-    config['GrammaticalDictionary']['Host']= database_host
-    config['GrammaticalDictionary']['Port']= str(database_port)
-    config['GrammaticalDictionary']['User']= database_user
+    config['GrammaticalDictionary']['Host'] = database_host
+    config['GrammaticalDictionary']['Port'] = str(database_port)
+    config['GrammaticalDictionary']['Database'] = database_name
+    config['GrammaticalDictionary']['User'] = database_user
     config['GrammaticalDictionary']['Password'] = database_password
     with open('configuration.ini', 'w') as configuration_file:
         config.write(configuration_file)
@@ -85,7 +102,12 @@ def create_database_configuration():
 
 
 def was_grammar_database_imported():
-    pass
+    """
+    Checks if the database contains the expected number of derivative words.
+    :return: True if the database has the grammatical information
+    """
+    derivative_words_count = run_sql_statement_using_config('select count(1) from derivative_form')
+    return derivative_words_count == 4013667
 
 
 def download_import_grammar_database():
@@ -113,6 +135,8 @@ def download_import_grammar_database():
             uncompressed_file.write(uncompressed_dbdump_data)
 
     print('Now we are going to create database with the grammatical classification')
+    run_sql_statement_using_config(f'source {uncompressed_file.name}')
+    return was_grammar_database_imported()
 
 
 # Main body

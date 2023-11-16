@@ -48,14 +48,13 @@ auth_handler.add_password(realm='please enter user and password',
 opener = urllib.request.build_opener(auth_handler)
 urllib.request.install_opener(opener)
 
-with tempfile.NamedTemporaryFile(suffix='dict.sql.gz', delete=False) as compressed_file:
-    with urllib.request.urlopen(GRAMMATICAL_DATABASE_URL) as url_downloader:
-        print(f'Downloading {GRAMMATICAL_DATABASE_URL} to {compressed_file.name}')
-        shutil.copyfileobj(url_downloader, compressed_file)
+with urllib.request.urlopen(GRAMMATICAL_DATABASE_URL) as url_downloader_response, gzip.GzipFile(fileobj=url_downloader_response) as compressed_file:
+    print(f'Downloading {GRAMMATICAL_DATABASE_URL}. Please wait 3-5 minutes')
+    uncompressed_dbdump_data = compressed_file.read()
 
-    with tempfile.NamedTemporaryFile(suffix='dict.sql', delete=False) as datatabase_dump:
-        print(f'Uncompressing {compressed_file.name} to {datatabase_dump.name}')
-        shutil.copyfileobj(compressed_file, datatabase_dump)
+    with tempfile.NamedTemporaryFile(suffix='dict.sql', delete=False) as uncompressed_file:
+        print(f'Saving data to {uncompressed_file.name}')
+        uncompressed_file.write(uncompressed_dbdump_data)
 
 print('Please provide the credentials to connect to your MySQL server')
 database_host=input('Please enter the hostname or IP (Default is localhost): ')

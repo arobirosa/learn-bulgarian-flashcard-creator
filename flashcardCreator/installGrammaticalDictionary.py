@@ -29,7 +29,7 @@ import tempfile
 
 # The database file located at https://rechnik.chitanka.info/db.sql.gz can only be downloaded with an interactive browser.
 # It moved it to my own hosting. It has the GPL 2 license
-GRAMMATICAL_DATABASE_URL='https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sql.gz'
+GRAMMATICAL_DATABASE_URL = 'https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sql.gz'
 
 print("Checking if the grammatical database was already downloaded.")
 config = configparser.ConfigParser()
@@ -39,12 +39,22 @@ if 'GrammaticalDictionary.User' in config:
     exit(1)
 
 print('Downloading the database with the grammatical classification')
-urllib.request.URLopener.version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36 SE 2.X ' \
-                                   'MetaSr 1.0'
-filehandle, _ = urllib.request.urlretrieve(GRAMMATICAL_DATABASE_URL)
-with gzip.open(filehandle, 'rb') as compressed_file:
+auth_handler = urllib.request.HTTPBasicAuthHandler()
+# TODO Remove credentials from code and change them on server
+auth_handler.add_password(realm='please enter user and password',
+                          uri='https://files.areko.consulting',
+                          user='reader',
+                          passwd='DQaGtM6LK3VNXras')
+opener = urllib.request.build_opener(auth_handler)
+urllib.request.install_opener(opener)
+
+with tempfile.NamedTemporaryFile(suffix='dict.sql.gz', delete=False) as compressed_file:
+    with urllib.request.urlopen(GRAMMATICAL_DATABASE_URL) as url_downloader:
+        print(f'Downloading {GRAMMATICAL_DATABASE_URL} to {compressed_file.name}')
+        shutil.copyfileobj(url_downloader, compressed_file)
+
     with tempfile.NamedTemporaryFile(suffix='dict.sql', delete=False) as datatabase_dump:
-        print(f'Uncompressing {filehandle} to {datatabase_dump}')
+        print(f'Uncompressing {compressed_file.name} to {datatabase_dump.name}')
         shutil.copyfileobj(compressed_file, datatabase_dump)
 
 print('Please provide the credentials to connect to your MySQL server')
@@ -59,11 +69,11 @@ else:
 database_user=input('Please enter the username with rights to create databases and users: ')
 if not database_user:
     print('No user was entered. Exiting')
-    exit(2)
+    exit(3)
 database_password=getpass('Please enter the password of the user with rights to create databases and users: ')
 if not database_password:
     print('No password was entered. Exiting')
-    exit(2)
+    exit(4)
 
 print('Attempting to connect to the database server')
 try:
@@ -71,7 +81,7 @@ try:
         print('Connection SUCCESSFUL.')
 except Error as e:
     print('The connection failed:', e)
-    exit(3)
+    exit(5)
 
 print('Now we are going to create database with the grammatical classification')
 

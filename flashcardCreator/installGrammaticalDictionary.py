@@ -42,8 +42,9 @@ def run_sql_statement_using_config(sql_statement : str):
             password=config['GrammaticalDictionary']['Password'],database=config['GrammaticalDictionary']['Database']) as db_connection:
         with db_connection.cursor() as db_cursor:
             db_cursor.execute(sql_statement)
+            db_cursor.fetchall()
             return db_cursor.rowcount
-    return -1;
+    return -1
 
 
 
@@ -106,6 +107,10 @@ def was_grammar_database_imported():
     Checks if the database contains the expected number of derivative words.
     :return: True if the database has the grammatical information
     """
+    if run_sql_statement_using_config("SELECT 1 FROM information_schema.TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE' AND TABLE_NAME = "
+                                      "'derivative_form';") != 1:
+        return False
+
     derivative_words_count = run_sql_statement_using_config('select count(1) from derivative_form')
     return derivative_words_count == 4013667
 

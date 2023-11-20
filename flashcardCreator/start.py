@@ -22,16 +22,20 @@
 import argparse
 import sqlite3
 import configparser
+import logging
+import logging.config
+import yaml
 
-# TODO Add logging replacing the print calls
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
+LOG = logging.getLogger(__name__)
 
 def return_first_row_of_sql_statement(database_file, sql_statement : str, params):
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
         db_cursor.execute(sql_statement, params)
         return db_cursor.fetchone()
+
 
 def trim_lower_case(input : str):
     return input.strip().lower()
@@ -41,10 +45,25 @@ parser = argparse.ArgumentParser(
      description='Selects vocabulary and generates flashcards for studying')
 parser.add_argument('-d', '--flashcard-database', type=str, default='flashcards.sqlite')
 parser.add_argument('-v', '--verbose', action='store_true', help='Shows what the flash generator is doing')
+parser.add_argument('-vv', '--debug', action='store_true', help='Shows debug information')
 parser.add_argument('word_to_import', type=trim_lower_case, help='Word which you want to study')
 
 global_arguments = parser.parse_args()
-print(global_arguments)
+
+# Logging configuration
+if global_arguments.debug:
+    logging_level = logging.DEBUG
+elif global_arguments.verbose:
+    logging_level = logging.INFO
+else:
+    logging_level = logging.WARNING
+
+with open('conf/logging.yaml', 'r') as logging_config:
+    config = yaml.load(logging_config, Loader=yaml.FullLoader)
+    logging.config.dictConfig(config)
+
+LOG.setLevel(logging_level)
+LOG.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
 search_params = (global_arguments.word_to_import, )
@@ -59,7 +78,7 @@ found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_L
 ''', search_params)
 
 if found_classified_word is None:
-    print(f'The word {global_arguments.word_to_import} is unknown. Exiting')
+    LOG.info(f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
 
 word_id, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
@@ -67,14 +86,14 @@ word_id, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
 if ('WordTypes' not in config) or not config['WordTypes'].get('supported_speech_parts'):
-    print('The list of supported speech parts is missing inside the configuration')
+    LOG.info('The list of supported speech parts is missing inside the configuration')
     exit(2)
 
 if speech_part not in config['WordTypes'].get('supported_speech_parts').split(','):
-    print(f'The speech part {speech_part} is still not supported')
+    LOG.info(f'The speech part {speech_part} is still not supported')
     exit(3)
 
-print(found_classified_word)
+LOG.warning(found_classified_word)
 
 # Check if the word already exists in the flashcard database
 

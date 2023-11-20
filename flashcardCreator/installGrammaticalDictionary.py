@@ -16,90 +16,34 @@
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 
-# This script downloads the dictionary data, creates a local database and creates
-# the configuration file.
+# This script downloads the dictionary data, creates a local database
 
 import configparser
 import gzip
-import tempfile
 import urllib.request
-from getpass import getpass
-
-from mysql.connector import connect, Error
+import sqlite3
+from os.path import exists
 
 # TODO Add logging replacing the print calls
+# TODO Remove dependency to mySql on pip
+# TODO Remove unnecessary files from server
+# TODO Move this module to a package in the main application
+# TODO Internationalize use inputs
 
 # The database file located at https://rechnik.chitanka.info/db.sql.gz can only be downloaded with an interactive browser.
 # It moved it to my own hosting. It has the GPL 2 license
-CONFIG_FILENAME = 'configuration.ini'
-GRAMMATICAL_DATABASE_URL = 'https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sql.gz'
+GRAMMATICAL_DATABASE_URL = 'https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sqlite.gz'
+GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 
 
-def run_sql_statement_using_config(sql_statement : str):
-    config = configparser.ConfigParser(interpolation=None)
-    config.read(CONFIG_FILENAME)
-    with connect(host=config['GrammaticalDictionary']['Host'], port=int(config['GrammaticalDictionary']['Port']), user=config['GrammaticalDictionary']['User'], \
-            password=config['GrammaticalDictionary']['Password'],database=config['GrammaticalDictionary']['Database']) as db_connection:
-        with db_connection.cursor() as db_cursor:
-            db_cursor.execute(sql_statement)
-            db_cursor.fetchall()
-            return db_cursor.rowcount
+def run_count_sql_statement_using_config(sql_statement : str):
+    with sqlite3.connect(GRAMMATICAL_DATABASE_LOCAL_FILENAME) as db_connection:
+        db_cursor = db_connection.cursor()
+        db_cursor.execute(sql_statement)
+        firstRow = db_cursor.fetchone()
+        firstValue, = firstRow
+        return firstValue
     return -1
-
-
-
-def create_database_configuration():
-    """
-    Asks for the database parameters and saves the configuration on disk if the connection was successful
-    :return:True if there were no errors
-    """
-    config = configparser.ConfigParser(interpolation=None)
-    config.read(CONFIG_FILENAME)
-    if 'GrammaticalDictionary' in config and config['GrammaticalDictionary'].get('User'):
-        print('The connection to the database containing the grammatical dictionary was already configured')
-        return True
-
-    print('Please provide the credentials to connect to your MySQL server')
-    database_host=input('Please enter the hostname or IP (Default is localhost): ')
-    if not database_host:
-        database_host = 'localhost'
-    database_port_str=input('Please enter the port (Default is 3336): ')
-    if database_port_str:
-        database_port = int(database_port_str)
-    else:
-        database_port = 3306
-    database_name=input('Please enter the name of the database: ')
-    if not database_name:
-        print('No database''s name was entered. Exiting')
-        return False
-    database_user=input('Please enter the username: ')
-    if not database_user:
-        print('No user was entered. Exiting')
-        return False
-    database_password=getpass('Please enter the password of the user: ')
-    if not database_password:
-        print('No password was entered. Exiting')
-        return False
-
-    print('Attempting to connect to the database server')
-    try:
-        with connect(host=database_host, port=database_port, user=database_user, password=database_password, database=database_name):
-            print('Connection SUCCESSFUL.')
-    except Error as e:
-        print('The connection failed:', e)
-        return False
-
-    print("Saving the database connection information in the configuration file")
-    config.add_section("GrammaticalDictionary")
-    config['GrammaticalDictionary']['Host'] = database_host
-    config['GrammaticalDictionary']['Port'] = str(database_port)
-    config['GrammaticalDictionary']['Database'] = database_name
-    config['GrammaticalDictionary']['User'] = database_user
-    config['GrammaticalDictionary']['Password'] = database_password
-    with open('configuration.ini', 'w') as configuration_file:
-        config.write(configuration_file)
-
-    return True
 
 
 def was_grammar_database_imported():
@@ -107,11 +51,14 @@ def was_grammar_database_imported():
     Checks if the database contains the expected number of derivative words.
     :return: True if the database has the grammatical information
     """
-    if run_sql_statement_using_config("SELECT 1 FROM information_schema.TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE' AND TABLE_NAME = "
+    if not exists(GRAMMATICAL_DATABASE_LOCAL_FILENAME):
+        return False
+
+    if run_count_sql_statement_using_config("SELECT count(1) FROM sqlite_schema WHERE type = 'table' AND name = "
                                       "'derivative_form';") != 1:
         return False
 
-    derivative_words_count = run_sql_statement_using_config('select count(1) from derivative_form')
+    derivative_words_count = run_count_sql_statement_using_config('select count(1) from derivative_form')
     return derivative_words_count == 4013667
 
 
@@ -135,19 +82,16 @@ def download_import_grammar_database():
         print(f'Downloading {GRAMMATICAL_DATABASE_URL}. Please wait 3-5 minutes')
         uncompressed_dbdump_data = compressed_file.read()
 
-        with tempfile.NamedTemporaryFile(suffix='dict.sql', delete=False) as uncompressed_file:
-            print(f'Saving data to {uncompressed_file.name}')
-            uncompressed_file.write(uncompressed_dbdump_data)
+        with open(GRAMMATICAL_DATABASE_LOCAL_FILENAME, 'wb+') as uncompressed_database_file:
+            print(f'Saving data to {uncompressed_database_file.name}')
+            uncompressed_database_file.write(uncompressed_dbdump_data)
 
-    print('Now we are going to create database with the grammatical classification')
-    run_sql_statement_using_config(f'source {uncompressed_file.name}')
+    print('Checking if the database was correctly downloaded')
     return was_grammar_database_imported()
 
 
 # Main body
-if not create_database_configuration():
-    exit(1)
-elif not download_import_grammar_database():
+if not download_import_grammar_database():
     exit(2)
 else:
     print('Now you can start using the flash creator')

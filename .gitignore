@@ -160,4 +160,3 @@ cython_debug/
 #.idea/
 **/.idea/sonarlint/securityhotspotstore/
 **/.idea/sonarlint/issuestore/
-flashcardCreator/configuration.ini

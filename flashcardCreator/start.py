@@ -21,9 +21,11 @@
 
 import argparse
 import sqlite3
+import configparser
 
 # TODO Add logging replacing the print calls
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
+CONFIG_FILENAME = 'configuration.ini'
 
 def return_first_row_of_sql_statement(database_file, sql_statement : str, params):
     with sqlite3.connect(database_file) as db_connection:
@@ -47,7 +49,7 @@ print(global_arguments)
 # Find what type of word is it together with its writing rules
 search_params = (global_arguments.word_to_import, )
 found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-    SELECT w.id, w.type_id, wt.speech_part, wt.comment, wt.rules, wt.rules_test
+    SELECT w.id, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
     join word as w
     on w.id = df.base_word_id
@@ -56,7 +58,21 @@ found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_L
     where df.name = ?;
 ''', search_params)
 
+if found_classified_word is None:
+    print(f'The word {global_arguments.word_to_import} is unknown. Exiting')
+    exit(1)
 
+word_id, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
+
+config = configparser.ConfigParser(interpolation=None)
+config.read(CONFIG_FILENAME)
+if ('WordTypes' not in config) or not config['WordTypes'].get('supported_speech_parts'):
+    print('The list of supported speech parts is missing inside the configuration')
+    exit(2)
+
+if speech_part not in config['WordTypes'].get('supported_speech_parts').split(','):
+    print(f'The speech part {speech_part} is still not supported')
+    exit(3)
 
 print(found_classified_word)
 

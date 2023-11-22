@@ -19,6 +19,10 @@
 # This script is the starting point. Process the input, ask the user for additional
 # information and stores the new word on the database with its translation
 
+#TODO Add translation with PONS
+#TODO Add translation with Mymemory https://mymemory.translated.net/doc/spec.php
+#TODO Check licenses of the dependencies
+
 import argparse
 import configparser
 import logging.config
@@ -143,6 +147,7 @@ translated_word_original = translate_text_to_english(word_original,
 
 logger.info(
     f'The word {word_original} translates to "{translated_word_original}" ')
+
 # Ask the user to accept the translation
 
 # If the noun is irregular, ask the user what he wants to study

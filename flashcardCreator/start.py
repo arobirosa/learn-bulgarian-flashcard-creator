@@ -20,18 +20,21 @@
 # information and stores the new word on the database with its translation
 
 import argparse
-import sqlite3
 import configparser
-import logging
 import logging.config
+import sqlite3
+
 import yaml
+
 from flashcardcreator.translator import translate_text_to_english
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
 logger = logging.getLogger(__name__)
 
-def return_first_row_of_sql_statement(database_file, sql_statement : str, params):
+
+def return_first_row_of_sql_statement(database_file, sql_statement: str,
+                                      params):
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
         db_cursor.execute(sql_statement, params)
@@ -41,13 +44,18 @@ def return_first_row_of_sql_statement(database_file, sql_statement : str, params
 def trim_lower_case(input_word: str):
     return input_word.strip().lower()
 
+
 parser = argparse.ArgumentParser(
-     prog='flashcardCreatorBG',
-     description='Selects vocabulary and generates flashcards for studying')
-parser.add_argument('-d', '--flashcard-database', type=str, default='flashcards.sqlite')
-parser.add_argument('-v', '--verbose', action='store_true', help='Shows what the flash generator is doing')
-parser.add_argument('-vv', '--debug', action='store_true', help='Shows debug information')
-parser.add_argument('word_to_import', type=trim_lower_case, help='Word which you want to study')
+    prog='flashcardCreatorBG',
+    description='Selects vocabulary and generates flashcards for studying')
+parser.add_argument('-d', '--flashcard-database', type=str,
+                    default='flashcards.sqlite')
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='Shows what the flash generator is doing')
+parser.add_argument('-vv', '--debug', action='store_true',
+                    help='Shows debug information')
+parser.add_argument('word_to_import', type=trim_lower_case,
+                    help='Word which you want to study')
 
 global_arguments = parser.parse_args()
 
@@ -67,8 +75,9 @@ logger.setLevel(logging_level)
 logger.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
-search_params = { 'word_to_import': global_arguments.word_to_import}
-found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
+search_params = {'word_to_import': global_arguments.word_to_import}
+found_classified_word = return_first_row_of_sql_statement(
+    GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
     SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
     join word as w
@@ -79,28 +88,34 @@ found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_L
 ''', search_params)
 
 if found_classified_word is None:
-    logger.info(f'The word {global_arguments.word_to_import} is unknown. Exiting')
+    logger.info(
+        f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
 
 word_id, word_original, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
-logger.debug(f'The word {word_original} is classified as {found_classified_word}')
+logger.debug(
+    f'The word {word_original} is classified as {found_classified_word}')
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
-if ('WordTypes' not in config) or not config['WordTypes'].get('supported_speech_parts'):
-    logger.info('The list of supported speech parts is missing inside the configuration')
+if ('WordTypes' not in config) or not config['WordTypes'].get(
+        'supported_speech_parts'):
+    logger.info(
+        'The list of supported speech parts is missing inside the configuration')
     exit(2)
 
-if speech_part not in config['WordTypes'].get('supported_speech_parts').split(','):
+if speech_part not in config['WordTypes'].get('supported_speech_parts').split(
+        ','):
     logger.info(f'The speech part {speech_part} is still not supported')
     exit(3)
 
 # Check if the word already exists in the flashcard database
 word_search_parameters = {
-                    'wordToSearch': word_original,
-                    'wordId': word_id
-               }
-first_found_row = return_first_row_of_sql_statement(global_arguments.flashcard_database, '''
+    'wordToSearch': word_original,
+    'wordId': word_id
+}
+first_found_row = return_first_row_of_sql_statement(
+    global_arguments.flashcard_database, '''
     select a.masculineForm, a.externalWordId
     from adjetives as a
     where a.masculineForm = :wordToSearch or a.externalWordId = :wordId
@@ -123,9 +138,11 @@ if first_found_row is not None:
     exit(3)
 
 # Find translation in English for the word
-translated_word_original = translate_text_to_english(word_original, debug_client_calls=global_arguments.debug)
+translated_word_original = translate_text_to_english(word_original,
+                                                     debug_client_calls=global_arguments.debug)
 
-logger.info(f'The word {word_original} translates to "{translated_word_original}" ')
+logger.info(
+    f'The word {word_original} translates to "{translated_word_original}" ')
 # Ask the user to accept the translation
 
 # If the noun is irregular, ask the user what he wants to study

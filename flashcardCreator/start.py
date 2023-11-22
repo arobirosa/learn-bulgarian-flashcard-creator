@@ -25,12 +25,11 @@ import configparser
 import logging
 import logging.config
 import yaml
-import deepl
+from flashcardcreator.translator import translate_text_to_english
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
-API_KEYS_FILENAME = 'apiKeys.ini'
-LOG = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 def return_first_row_of_sql_statement(database_file, sql_statement : str, params):
     with sqlite3.connect(database_file) as db_connection:
@@ -64,8 +63,8 @@ with open('conf/logging.yaml', 'r') as logging_config:
     config = yaml.load(logging_config, Loader=yaml.FullLoader)
     logging.config.dictConfig(config)
 
-LOG.setLevel(logging_level)
-LOG.debug(f'Received parameters: {global_arguments}')
+logger.setLevel(logging_level)
+logger.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
 search_params = { 'word_to_import': global_arguments.word_to_import}
@@ -80,20 +79,20 @@ found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_L
 ''', search_params)
 
 if found_classified_word is None:
-    LOG.info(f'The word {global_arguments.word_to_import} is unknown. Exiting')
+    logger.info(f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
 
 word_id, word_original, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
-LOG.debug(f'The word {word_original} is classified as {found_classified_word}')
+logger.debug(f'The word {word_original} is classified as {found_classified_word}')
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
 if ('WordTypes' not in config) or not config['WordTypes'].get('supported_speech_parts'):
-    LOG.info('The list of supported speech parts is missing inside the configuration')
+    logger.info('The list of supported speech parts is missing inside the configuration')
     exit(2)
 
 if speech_part not in config['WordTypes'].get('supported_speech_parts').split(','):
-    LOG.info(f'The speech part {speech_part} is still not supported')
+    logger.info(f'The speech part {speech_part} is still not supported')
     exit(3)
 
 # Check if the word already exists in the flashcard database
@@ -120,28 +119,13 @@ first_found_row = return_first_row_of_sql_statement(global_arguments.flashcard_d
 ''', word_search_parameters)
 
 if first_found_row is not None:
-    LOG.info(f'The word {word_original} has already flash cards')
+    logger.info(f'The word {word_original} has already flash cards')
     exit(3)
 
 # Find translation in English for the word
-apiKeysConfig = configparser.ConfigParser(interpolation=None)
-apiKeysConfig.read(API_KEYS_FILENAME)
+translated_word_original = translate_text_to_english(word_original, debug_client_calls=global_arguments.debug)
 
-deepl_api_key = apiKeysConfig[apiKeysConfig.default_section].get("deepl")
-if not deepl_api_key:
-    LOG.error("Please visit https://www.deepl.com/pro-api and get a Free API key")
-    exit(4)
-
-if global_arguments.debug:
-    logging.getLogger('deepl').setLevel(logging.DEBUG)
-
-free_translator = deepl.Translator(auth_key=deepl_api_key, send_platform_info=False).set_app_info("Flashcard "
-                                                                                                                                "Creator", '0.0.1')
-translated_word_original = free_translator.translate_text(word_original, source_lang='BG', target_lang='EN-GB')
-
-
-LOG.info(f'The word {word_original} translates to "{translated_word_original}" ')
-
+logger.info(f'The word {word_original} translates to "{translated_word_original}" ')
 # Ask the user to accept the translation
 
 # If the noun is irregular, ask the user what he wants to study

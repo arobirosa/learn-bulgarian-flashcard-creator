@@ -25,9 +25,11 @@ import configparser
 import logging
 import logging.config
 import yaml
+import deepl
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
+API_KEYS_FILENAME = 'apiKeys.ini'
 LOG = logging.getLogger(__name__)
 
 def return_first_row_of_sql_statement(database_file, sql_statement : str, params):
@@ -68,7 +70,7 @@ LOG.debug(f'Received parameters: {global_arguments}')
 # Find what type of word is it together with its writing rules
 search_params = { 'word_to_import': global_arguments.word_to_import}
 found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-    SELECT w.id, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
+    SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
     join word as w
     on w.id = df.base_word_id
@@ -81,8 +83,8 @@ if found_classified_word is None:
     LOG.info(f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
 
-word_id, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
-LOG.debug(f'The word is classified as {found_classified_word}')
+word_id, word_original, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
+LOG.debug(f'The word {word_original} is classified as {found_classified_word}')
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
@@ -96,7 +98,7 @@ if speech_part not in config['WordTypes'].get('supported_speech_parts').split(',
 
 # Check if the word already exists in the flashcard database
 word_search_parameters = {
-                    'wordToSearch': global_arguments.word_to_import,
+                    'wordToSearch': word_original,
                     'wordId': word_id
                }
 first_found_row = return_first_row_of_sql_statement(global_arguments.flashcard_database, '''
@@ -118,10 +120,27 @@ first_found_row = return_first_row_of_sql_statement(global_arguments.flashcard_d
 ''', word_search_parameters)
 
 if first_found_row is not None:
-    LOG.info(f'The word {global_arguments.word_to_import} has already flash cards')
+    LOG.info(f'The word {word_original} has already flash cards')
     exit(3)
 
 # Find translation in English for the word
+apiKeysConfig = configparser.ConfigParser(interpolation=None)
+apiKeysConfig.read(API_KEYS_FILENAME)
+
+deepl_api_key = apiKeysConfig[apiKeysConfig.default_section].get("deepl")
+if not deepl_api_key:
+    LOG.error("Please visit https://www.deepl.com/pro-api and get a Free API key")
+    exit(4)
+
+if global_arguments.debug:
+    logging.getLogger('deepl').setLevel(logging.DEBUG)
+
+free_translator = deepl.Translator(auth_key=deepl_api_key, send_platform_info=False).set_app_info("Flashcard "
+                                                                                                                                "Creator", '0.0.1')
+translated_word_original = free_translator.translate_text(word_original, source_lang='BG', target_lang='EN-GB')
+
+
+LOG.info(f'The word {word_original} translates to "{translated_word_original}" ')
 
 # Ask the user to accept the translation
 

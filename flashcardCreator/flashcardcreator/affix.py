@@ -24,7 +24,17 @@ import re
 logger = logging.getLogger(__name__)
 
 
-def calculate_derivative_forms_of_noun(word_root, rules_string):
+def remove_empty_conversions(rule):
+    match rule:
+        case '0':
+            return ''
+        case '\\-':
+            return None
+        case _:
+            return rule
+
+
+def calculate_derivative_forms_of_noun(word_root, rules_string, speech_part):
     """
     :param word_root: Masculine noun without definite article
     :param rules_string: List of replacements from the grammatical database for this noun
@@ -32,17 +42,41 @@ def calculate_derivative_forms_of_noun(word_root, rules_string):
     """
     rules = rules_string.split('\n')
     suffix_to_replace, word_condition = rules[0].split(', ')
-    if not word_root.endswith(suffix_to_replace):
-        raise ValueError(f'The word'f's root {word_root} must end with {suffix_to_replace}')
+    if suffix_to_replace == '0':
+        suffix_to_replace = ''
+    elif not word_root.endswith(suffix_to_replace):
+        raise ValueError(
+            f'The word'f's root {word_root} must end with {suffix_to_replace}')
     word_condition_pattern = fr'.*{word_condition}$'
     if not re.match(word_condition_pattern, word_root):
-        raise ValueError(f'The word'f's root {word_root} must end with {word_condition}')
-    word_rest = word_root[:-len(suffix_to_replace)]
-    derivative_forms = {
-        'singular_indefinite': word_rest + rules[1],
-        'singular_definite': word_rest + rules[2],
-        'plural_indefinite': word_rest + rules[3],
-        'plural_definite': word_rest + rules[4],
+        raise ValueError(
+            f'The word'f's root {word_root} must end with {word_condition}')
+
+    if suffix_to_replace == '':
+        word_rest = word_root
+    else:
+        word_rest = word_root[:-len(suffix_to_replace)]
+
+    rules_meaning_and_position = {
+        'singular_indefinite': 1,
+        'singular_definite': 2,
+        'plural_indefinite': 3,
+        'plural_definite': 4,
+        'contable': None
     }
+    if speech_part == 'noun_male':
+        rules_meaning_and_position = {
+            'singular_indefinite': 1,
+            'singular_definite': 3,
+            'plural_indefinite': 4,
+            'plural_definite': 5,
+            'contable': 6
+        }
+
+    derivative_forms = {key: word_rest + remove_empty_conversions(
+        rules[rule_position]) for
+                        key, rule_position in
+                        rules_meaning_and_position.items()
+                        if rule_position is not None}
     logger.debug(f'Derivative forms of the noun {derivative_forms}')
     return derivative_forms

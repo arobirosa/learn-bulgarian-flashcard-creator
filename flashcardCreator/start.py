@@ -37,8 +37,8 @@ def return_first_row_of_sql_statement(database_file, sql_statement : str, params
         return db_cursor.fetchone()
 
 
-def trim_lower_case(input : str):
-    return input.strip().lower()
+def trim_lower_case(input_word: str):
+    return input_word.strip().lower()
 
 parser = argparse.ArgumentParser(
      prog='flashcardCreatorBG',
@@ -66,7 +66,7 @@ LOG.setLevel(logging_level)
 LOG.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
-search_params = (global_arguments.word_to_import, )
+search_params = { 'word_to_import': global_arguments.word_to_import}
 found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
     SELECT w.id, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
@@ -74,7 +74,7 @@ found_classified_word = return_first_row_of_sql_statement(GRAMMATICAL_DATABASE_L
     on w.id = df.base_word_id
     join word_type as wt
     on w.type_id = wt.id
-    where df.name = ?;
+    where df.name = :word_to_import;
 ''', search_params)
 
 if found_classified_word is None:
@@ -82,6 +82,7 @@ if found_classified_word is None:
     exit(1)
 
 word_id, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
+LOG.debug(f'The word is classified as {found_classified_word}')
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
@@ -93,9 +94,32 @@ if speech_part not in config['WordTypes'].get('supported_speech_parts').split(',
     LOG.info(f'The speech part {speech_part} is still not supported')
     exit(3)
 
-LOG.warning(found_classified_word)
-
 # Check if the word already exists in the flashcard database
+word_search_parameters = {
+                    'wordToSearch': global_arguments.word_to_import,
+                    'wordId': word_id
+               }
+first_found_row = return_first_row_of_sql_statement(global_arguments.flashcard_database, '''
+    select a.masculineForm, a.externalWordId
+    from adjetives as a
+    where a.masculineForm = :wordToSearch or a.externalWordId = :wordId
+    union
+    select n.noun, n.externalWordId
+    from nouns as n
+    where n.noun = :wordToSearch or n.externalWordId = :wordId
+    union
+    select o.word, o.externalWordId
+    from otherWordTypes as o
+    where o.word = :wordToSearch or o.externalWordId = :wordId
+    union
+    select vm.presentSingular1, vm.externalWordId
+    from verbMeanings as vm
+    where vm.presentSingular1 = :wordToSearch or vm.externalWordId = :wordId
+''', word_search_parameters)
+
+if first_found_row is not None:
+    LOG.info(f'The word {global_arguments.word_to_import} has already flash cards')
+    exit(3)
 
 # Find translation in English for the word
 

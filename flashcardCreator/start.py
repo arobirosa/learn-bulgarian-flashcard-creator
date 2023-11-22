@@ -16,6 +16,7 @@
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 
+
 # This script is the starting point. Process the input, ask the user for additional
 # information and stores the new word on the database with its translation
 
@@ -27,7 +28,6 @@
 import argparse
 import configparser
 import logging.config
-import sqlite3
 
 import yaml
 
@@ -35,23 +35,15 @@ import flashcardcreator
 import flashcardcreator.userinput
 from flashcardcreator.affix import calculate_derivative_forms_of_noun
 from flashcardcreator.translator import translate_text_to_english
+from flashcardcreator.database import insert_noun, \
+    return_first_row_of_sql_statement
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
 logger = logging.getLogger(__name__)
 
-
-def return_first_row_of_sql_statement(database_file, sql_statement: str,
-                                      params):
-    with sqlite3.connect(database_file) as db_connection:
-        db_cursor = db_connection.cursor()
-        db_cursor.execute(sql_statement, params)
-        return db_cursor.fetchone()
-
-
 def trim_lower_case(input_word: str):
     return input_word.strip().lower()
-
 
 parser = argparse.ArgumentParser(
     prog='flashcardCreatorBG',
@@ -84,7 +76,7 @@ logger.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
 search_params = {'word_to_import': global_arguments.word_to_import}
-found_classified_word = return_first_row_of_sql_statement(
+found_classified_word = flashcardcreator.database.return_first_row_of_sql_statement(
     GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
     SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
@@ -169,3 +161,24 @@ logger.debug(
     f'The following derivative forms are import to study {derivative_forms_to_study}')
 
 # Add the word to the flashcard database
+noun_fields = {
+    'noun': root_word,
+    'meaningInEnglish': final_translation,
+    'genderAbrev': 'f',
+    'irregularPluralEnding': None,
+    'irregularDefiniteArticle': None,
+    'countableEnding': None,
+    'irregularPluralWithArticle': None,
+    'externalWordId': word_id
+}
+if 'singular_definite' in derivative_forms_to_study:
+    noun_fields['irregularDefiniteArticle'] = derivative_forms_to_study[
+        'singular_definite']
+if 'plural_indefinite' in derivative_forms_to_study:
+    noun_fields['irregularPluralEnding'] = derivative_forms_to_study[
+        'plural_indefinite']
+if 'plural_definite' in derivative_forms_to_study:
+    noun_fields['irregularPluralWithArticle'] = derivative_forms_to_study[
+        'plural_definite']
+
+insert_noun(global_arguments.flashcard_database, noun_fields)

@@ -31,7 +31,9 @@ import sqlite3
 
 import yaml
 
+import flashcardcreator
 import flashcardcreator.userinput
+from flashcardcreator.affix import calculate_derivative_forms_of_noun
 from flashcardcreator.translator import translate_text_to_english
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
@@ -98,26 +100,19 @@ if found_classified_word is None:
         f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
 
-word_id, word_original, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
+word_id, root_word, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
 logger.debug(
-    f'The word {word_original} is classified as {found_classified_word}')
+    f'The word {root_word} is classified as {found_classified_word}')
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
-if ('WordTypes' not in config) or not config['WordTypes'].get(
-        'supported_speech_parts'):
-    logger.info(
-        'The list of supported speech parts is missing inside the configuration')
-    exit(2)
-
-if speech_part not in config['WordTypes'].get('supported_speech_parts').split(
-        ','):
-    logger.info(f'The speech part {speech_part} is still not supported')
-    exit(3)
+if speech_part not in config:
+    raise ValueError(
+        f'The speech part {speech_part} isn''t supported. If you want to support it, please add a section to the configuration file')
 
 # Check if the word already exists in the flashcard database
 word_search_parameters = {
-    'wordToSearch': word_original,
+    'wordToSearch': root_word,
     'wordId': word_id
 }
 first_found_row = return_first_row_of_sql_statement(
@@ -140,25 +135,37 @@ first_found_row = return_first_row_of_sql_statement(
 ''', word_search_parameters)
 
 if first_found_row is not None:
-    logger.info(f'The word {word_original} has already flash cards')
+    logger.info(f'The word {root_word} has already flash cards')
     exit(3)
 
 # Find translation in English for the word
-translated_word_original = translate_text_to_english(word_original,
+translated_word_original = translate_text_to_english(root_word,
                                                      debug_client_calls=global_arguments.debug)
 
 logger.info(
-    f'The word {word_original} translates to "{translated_word_original}" ')
+    f'The word {root_word} translates to "{translated_word_original}" ')
 
 # Ask the user to accept the translation
 final_translation = flashcardcreator.userinput.ask_user_for_translation(
-    word_original, translated_word_original)
+    root_word, translated_word_original)
 if not final_translation:
     logger.info("Exiting because no translation was provided")
     exit(5)
 
 logger.debug(f'The final translation is {final_translation}')
 
-# If the noun is irregular, ask the user what he wants to study
+# If the noun is irregular, keep only what is important to study
+all_derivative_forms = calculate_derivative_forms_of_noun(
+    root_word, word_type_rules)
+derivative_forms_to_keep = config[speech_part].get(str(word_type_id)).split(
+    ',')
+if not derivative_forms_to_keep:
+    raise ValueError(
+        f'The configuration value for {word_type_id} inside {speech_part} section is missing. The derivate forms were {derivative_forms}')
+derivative_forms_to_study = {key: all_derivative_forms[key] for key in
+                             derivative_forms_to_keep if
+                             key in all_derivative_forms}
+logger.debug(
+    f'The following derivative forms are import to study {derivative_forms_to_study}')
 
 # Add the word to the flashcard database

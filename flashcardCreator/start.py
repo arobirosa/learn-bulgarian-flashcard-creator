@@ -19,9 +19,10 @@
 # This script is the starting point. Process the input, ask the user for additional
 # information and stores the new word on the database with its translation
 
-#TODO Add translation with PONS
-#TODO Add translation with Mymemory https://mymemory.translated.net/doc/spec.php
-#TODO Check licenses of the dependencies
+# TODO Add translation with PONS
+# TODO Add translation with Mymemory https://mymemory.translated.net/doc/spec.php
+# TODO Check licenses of the dependencies
+# TODO Internationalize all prompts
 
 import argparse
 import configparser
@@ -30,6 +31,7 @@ import sqlite3
 
 import yaml
 
+import flashcardcreator.userinput
 from flashcardcreator.translator import translate_text_to_english
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
@@ -149,6 +151,13 @@ logger.info(
     f'The word {word_original} translates to "{translated_word_original}" ')
 
 # Ask the user to accept the translation
+final_translation = flashcardcreator.userinput.ask_user_for_translation(
+    word_original, translated_word_original)
+if not final_translation:
+    logger.info("Exiting because no translation was provided")
+    exit(5)
+
+logger.debug(f'The final translation is {final_translation}')
 
 # If the noun is irregular, ask the user what he wants to study
 

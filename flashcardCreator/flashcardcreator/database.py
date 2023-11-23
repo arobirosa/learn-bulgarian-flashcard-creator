@@ -32,7 +32,9 @@ def return_rows_of_sql_statement(database_file, sql_statement: str,
         return db_cursor.fetchall()
 
 
-def insert_noun(database_file, noun_fiels):
+def insert_noun(database_file, noun_fields):
+    logger.info(
+        f'Adding a flashcard for the noun with the fields: {noun_fields}')
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
         db_cursor.execute('''
@@ -42,7 +44,7 @@ def insert_noun(database_file, noun_fiels):
         values (:noun, :meaningInEnglish, :genderAbrev, :irregularPluralEnding, :irregularDefiniteArticle,
                    :countableEnding, :irregularPluralWithArticle,
                    :externalWordId);
-        ''', noun_fiels)
+        ''', noun_fields)
         db_connection.commit()
-        logger.info(f'The noun {noun_fiels["noun"]} was added to the flashcard database')
-
+        logger.info(
+            f'The noun {noun_fields["noun"]} was added to the flashcard database')

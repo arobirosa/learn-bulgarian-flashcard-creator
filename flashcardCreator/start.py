@@ -28,8 +28,7 @@
 import argparse
 import configparser
 import logging.config
-import yaml
-import unicodedata
+
 
 import flashcardcreator
 import flashcardcreator.userinput
@@ -38,23 +37,8 @@ from flashcardcreator.translator import translate_text_to_english
 from flashcardcreator.database import insert_noun, \
     return_rows_of_sql_statement
 
-GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
 logger = logging.getLogger(__name__)
-
-
-def remove_accents(input_str):
-    # Decompose all unicode characters in the original one and the accent
-    nfkd_form = unicodedata.normalize('NFKD', input_str)
-    # We keep the long i as one single unicode character
-    nfkd_form = nfkd_form.replace('й', 'й')
-    return ''.join(
-        [c for c in nfkd_form if not unicodedata.combining(c)])
-
-
-def trim_lower_case(input_word: str):
-    return remove_accents(input_word.strip().lower())
-
 
 parser = argparse.ArgumentParser(
     prog='flashcardCreatorBG',
@@ -65,61 +49,18 @@ parser.add_argument('-v', '--verbose', action='store_true',
                     help='Shows what the flash generator is doing')
 parser.add_argument('-vv', '--debug', action='store_true',
                     help='Shows debug information')
-parser.add_argument('word_to_import', type=trim_lower_case,
+parser.add_argument('word_to_import',
                     help='Word which you want to study')
 
 global_arguments = parser.parse_args()
-
-# Logging configuration
-if global_arguments.debug:
-    logging_level = logging.DEBUG
-elif global_arguments.verbose:
-    logging_level = logging.INFO
-else:
-    logging_level = logging.WARNING
-
-with open('conf/logging.yaml', 'r') as logging_config:
-    config = yaml.load(logging_config, Loader=yaml.FullLoader)
-    logging.config.dictConfig(config)
-
-logger.setLevel(logging_level)
 logger.debug(f'Received parameters: {global_arguments}')
 
-# Find what type of word is it together with its writing rules
-search_params = {'word_to_import': global_arguments.word_to_import}
-found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
-    GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-    SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
-    FROM derivative_form as df
-    join word as w
-    on w.id = df.base_word_id
-    join word_type as wt
-    on w.type_id = wt.id
-    where df.name = :word_to_import;
-''', search_params)
-
-if not found_classified_words:
-    logger.warning(
-        f'The word {global_arguments.word_to_import} is unknown. Exiting')
-    exit(1)
-elif len(found_classified_words) > 1:
-    found_classified_word = flashcardcreator.userinput.ask_user_to_choose_a_row(
-        found_classified_words)
-    if found_classified_word is None:
-        logger.warning('The user wants to exit')
-        exit(2)
-else:
-    found_classified_word = found_classified_words[0]
-
-word_id, root_word, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
-logger.debug(
-    f'The word {root_word} is classified as {found_classified_word}')
+flashcardcreator.main.flashcard_database = global_arguments.flashcard_database
+flashcardcreator.main.load_logging_configuration(debug=global_arguments.debug,
+                                                 verbose=global_arguments.verbose)
 
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
-if speech_part not in config:
-    raise ValueError(
-        f'The speech part {speech_part} isn''t supported. If you want to support it, please add a section to the configuration file')
 
 # Check if the word already exists in the flashcard database
 word_search_parameters = {

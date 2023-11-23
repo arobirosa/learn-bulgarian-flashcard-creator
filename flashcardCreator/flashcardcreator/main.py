@@ -95,9 +95,10 @@ class AbstractClassifiedWord(ABC):
         Uses a translation API to suggest the user a translation and ask him for a corrected translation
         :return: True if the final translation was accepted. False if the user wants to exit
         """
+        global main_debug
         # Find an automatic translation in English for the word
-        translated_word_original = translate_text_to_english(root_word,
-                                                             debug_client_calls=__name__.main_debug)
+        translated_word_original = translate_text_to_english(self._root_word,
+                                                             debug_client_calls=main_debug)
 
         logger.info(
             f'The word {self._root_word} translates to "{translated_word_original}" ')
@@ -317,25 +318,31 @@ class WordFinder:
             f'The word {found_classified_word[1]} is classified as {found_classified_word}')
         word_id, root_word, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
         match speech_part:
-            case 'noun_female', 'noun_male', 'noun_neutral':
+            case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_type_id, speech_part,
                             word_type_rules, word_type_rules_test,
                             word_type_example_word)
             case _:
                 raise ValueError(
-                    f'The speech part {speech_part} isn''t supported.')
+                    f"The speech part {speech_part} isn't supported.")
 
 
 def load_logging_configuration(debug=False, verbose=False):
     if debug:
         logging_level = logging.DEBUG
-        __name__.main_debug = True
+        global main_debug
+        main_debug = True
     elif verbose:
         logging_level = logging.INFO
     else:
         logging_level = logging.WARNING
     with open('conf/logging.yaml', 'r') as logging_config:
-        config = yaml.load(logging_config, Loader=yaml.FullLoader)
-        logging.config.dictConfig(config)
+        config_yaml = yaml.load(logging_config, Loader=yaml.FullLoader)
+        logging.config.dictConfig(config_yaml)
     logger.setLevel(logging_level)
     logger.debug(f"The global logging level was set to {logging_level}")
+
+
+def set_flashcard_database(database_file):
+    global flashcard_database
+    flashcard_database = database_file

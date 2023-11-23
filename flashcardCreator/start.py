@@ -29,7 +29,8 @@ import argparse
 import logging.config
 
 
-import flashcardcreator
+from flashcardcreator.main import set_flashcard_database, \
+    load_logging_configuration, WordFinder
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,11 @@ parser.add_argument('word_to_import',
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
 
-flashcardcreator.main.flashcard_database = global_arguments.flashcard_database
-flashcardcreator.main.load_logging_configuration(debug=global_arguments.debug,
-                                                 verbose=global_arguments.verbose)
+set_flashcard_database(global_arguments.flashcard_database)
+load_logging_configuration(debug=global_arguments.debug,
+                           verbose=global_arguments.verbose)
 
-found_word = flashcardcreator.main.WordFinder.find_word_with_english_translation(
+found_word = WordFinder.find_word_with_english_translation(
     global_arguments.word_to_import)
 if found_word is None:
     exit(1)

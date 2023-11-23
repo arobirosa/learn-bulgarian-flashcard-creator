@@ -34,6 +34,23 @@ def remove_empty_conversions(rule):
             return rule
 
 
+def check_if_fullfils_condition(word_root, first_rule):
+    """
+    If the first derivation rule contains a condition, checks that the root word fullfils it.
+    Throws an exception if not.
+
+    :param word_root: Word to test
+    :param first_rule:  String containing the suffix of the word root to replace when creating the derivate forms and possible a conditions
+    """
+    if ',' not in first_rule:
+        return
+    _, word_condition = first_rule.split(', ')
+    word_condition_pattern = fr'.*{word_condition}$'
+    if not re.match(word_condition_pattern, word_root):
+        raise ValueError(
+            f'The word'f's root {word_root} must end with {word_condition}')
+
+
 def calculate_derivative_forms_of_noun(word_root, rules_string, speech_part):
     """
     :param word_root: Masculine noun without definite article
@@ -41,17 +58,16 @@ def calculate_derivative_forms_of_noun(word_root, rules_string, speech_part):
     :return: dictionary containing the derivative forms
     """
     rules = rules_string.split('\n')
-    suffix_to_replace, word_condition = rules[0].split(', ')
+    check_if_fullfils_condition(word_root, rules[0])
+    if ',' in rules[0]:
+        suffix_to_replace, _ = rules[0].split(', ')
+    else:
+        suffix_to_replace = rules[0]
     if suffix_to_replace == '0':
         suffix_to_replace = ''
     elif not word_root.endswith(suffix_to_replace):
         raise ValueError(
             f'The word'f's root {word_root} must end with {suffix_to_replace}')
-    word_condition_pattern = fr'.*{word_condition}$'
-    if not re.match(word_condition_pattern, word_root):
-        raise ValueError(
-            f'The word'f's root {word_root} must end with {word_condition}')
-
     if suffix_to_replace == '':
         word_rest = word_root
     else:

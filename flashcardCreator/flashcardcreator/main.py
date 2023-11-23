@@ -19,7 +19,10 @@
 # Contains the main classes
 import logging
 from abc import ABC, abstractmethod
-import flashcardcreator.database
+from flashcardcreator.database import insert_noun, \
+    return_rows_of_sql_statement
+from flashcardcreator.translator import translate_text_to_english
+import flashcardcreator.userinput
 import unicodedata
 import yaml
 
@@ -27,19 +30,82 @@ GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 logger = logging.getLogger(__name__)
 # Location of the flashcard which can be given by the user
 flashcard_database = None
+main_debug = False
 
 
 class AbstractClassifiedWord(ABC):
     def __init__(self, word_id, root_word, word_type_id, speech_part,
                  word_type_rules, word_type_rules_test,
                  word_type_example_word):
-        self.word_id = word_id
-        self.root_word = root_word
-        self.word_type_id = word_type_id
-        self.speech_part = speech_part
-        self.word_type_rules = word_type_rules
-        self.word_type_rules_test = word_type_rules_test
-        self.word_type_example_word = word_type_example_word
+        self._word_id = word_id
+        self._root_word = root_word
+        self._word_type_id = word_type_id
+        self._speech_part = speech_part
+        self._word_type_rules = word_type_rules
+        self._word_type_rules_test = word_type_rules_test
+        self._word_type_example_word = word_type_example_word
+        self._final_translation = None
+
+
+    def exists_flashcard_for_this_word(self):
+        """
+        Check if the word already exists in the flashcard database
+
+        :return: True if the word don't exist
+        """
+        word_search_parameters = {
+            'wordToSearch': self._root_word,
+            'wordId': self._word_id
+        }
+        found_flashcards = return_rows_of_sql_statement(
+            flashcard_database, '''
+            select a.masculineForm, a.externalWordId
+            from adjetives as a
+            where a.masculineForm = :wordToSearch or a.externalWordId = :wordId
+            union
+            select n.noun, n.externalWordId
+            from nouns as n
+            where n.noun = :wordToSearch or n.externalWordId = :wordId
+            union
+            select o.word, o.externalWordId
+            from otherWordTypes as o
+            where o.word = :wordToSearch or o.externalWordId = :wordId
+            union
+            select vm.presentSingular1, vm.externalWordId
+            from verbMeanings as vm
+            where vm.presentSingular1 = :wordToSearch or vm.externalWordId = :wordId
+        ''', word_search_parameters)
+
+        if found_flashcards:
+            logger.warning(
+                f'The word {self._root_word} has already flash cards')
+            return True
+        else:
+            return False
+
+
+    def ask_user_for_final_translation(self):
+        """
+        Uses a translation API to suggest the user a translation and ask him for a corrected translation
+        :return: True if the final translation was accepted. False if the user wants to exit
+        """
+        # Find an automatic translation in English for the word
+        translated_word_original = translate_text_to_english(root_word,
+                                                             debug_client_calls=__name__.main_debug)
+
+        logger.info(
+            f'The word {self._root_word} translates to "{translated_word_original}" ')
+
+        # Ask the user to accept the translation
+        final_translation = flashcardcreator.userinput.ask_user_for_translation(
+            self._root_word, translated_word_original)
+        if not final_translation:
+            logger.info("Exiting because no translation was provided")
+            return False
+
+        logger.debug(f'The final translation is {final_translation}')
+        self._final_translation = final_translation
+        return True
 
 
     @abstractmethod
@@ -92,9 +158,11 @@ class WordFinder:
         return WordFinder._remove_accents(input_word.strip().lower())
 
 
-    def find_word(self, word_to_search: str):
+    @staticmethod
+    def _find_word(word_to_search: str):
         """
-        Normalizes the given word and searches for its word type and derivation rules.
+        Normalizes the given word and searches for its word type and derivation rules. Ask
+        the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
         :return:
         :rtype: None or a AbstractClassifiedWord
@@ -125,8 +193,26 @@ class WordFinder:
         else:
             found_classified_word = found_classified_words[0]
 
-        return self._create_classified_word_subclass(found_classified_word)
+        return WordFinder._create_classified_word_subclass(
+            found_classified_word)
 
+
+    @staticmethod
+    def find_word_with_english_translation(word_to_search: str):
+        """
+        Normalizes the given word and searches for its word type and derivation rules. Ask
+        the user to confirm the translation in English
+        If multiple words are found, the user will be prompted to choose one.
+        :return:
+        :rtype: None or a AbstractClassifiedWord
+        """
+        word = WordFinder._find_word(word_to_search)
+        if word.exists_flashcard_for_this_word():
+            return None
+        if not word.ask_user_for_final_translation():
+            return None
+        return word
+    
 
     @staticmethod
     def _create_classified_word_subclass(found_classified_word):
@@ -148,9 +234,9 @@ class WordFinder:
 
 
 def load_logging_configuration(debug=False, verbose=False):
-    global config
     if debug:
         logging_level = logging.DEBUG
+        __name__.main_debug = True
     elif verbose:
         logging_level = logging.INFO
     else:

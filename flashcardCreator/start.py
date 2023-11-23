@@ -31,11 +31,8 @@ import logging.config
 
 
 import flashcardcreator
-import flashcardcreator.userinput
+
 from flashcardcreator.affix import calculate_derivative_forms_of_noun
-from flashcardcreator.translator import translate_text_to_english
-from flashcardcreator.database import insert_noun, \
-    return_rows_of_sql_statement
 
 CONFIG_FILENAME = 'configuration.ini'
 logger = logging.getLogger(__name__)
@@ -59,52 +56,13 @@ flashcardcreator.main.flashcard_database = global_arguments.flashcard_database
 flashcardcreator.main.load_logging_configuration(debug=global_arguments.debug,
                                                  verbose=global_arguments.verbose)
 
+found_word = flashcardcreator.main.WordFinder.find_word_with_english_translation(
+    global_arguments.word_to_import)
+if found_word is None:
+    exit(1)
+
 config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
-
-# Check if the word already exists in the flashcard database
-word_search_parameters = {
-    'wordToSearch': root_word,
-    'wordId': word_id
-}
-found_flashcards = return_rows_of_sql_statement(
-    global_arguments.flashcard_database, '''
-    select a.masculineForm, a.externalWordId
-    from adjetives as a
-    where a.masculineForm = :wordToSearch or a.externalWordId = :wordId
-    union
-    select n.noun, n.externalWordId
-    from nouns as n
-    where n.noun = :wordToSearch or n.externalWordId = :wordId
-    union
-    select o.word, o.externalWordId
-    from otherWordTypes as o
-    where o.word = :wordToSearch or o.externalWordId = :wordId
-    union
-    select vm.presentSingular1, vm.externalWordId
-    from verbMeanings as vm
-    where vm.presentSingular1 = :wordToSearch or vm.externalWordId = :wordId
-''', word_search_parameters)
-
-if found_flashcards:
-    logger.warning(f'The word {root_word} has already flash cards')
-    exit(3)
-
-# Find translation in English for the word
-translated_word_original = translate_text_to_english(root_word,
-                                                     debug_client_calls=global_arguments.debug)
-
-logger.info(
-    f'The word {root_word} translates to "{translated_word_original}" ')
-
-# Ask the user to accept the translation
-final_translation = flashcardcreator.userinput.ask_user_for_translation(
-    root_word, translated_word_original)
-if not final_translation:
-    logger.info("Exiting because no translation was provided")
-    exit(5)
-
-logger.debug(f'The final translation is {final_translation}')
 
 # If the noun is irregular, keep only what is important to study
 all_derivative_forms = calculate_derivative_forms_of_noun(

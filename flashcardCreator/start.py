@@ -44,8 +44,12 @@ logger = logging.getLogger(__name__)
 
 
 def remove_accents(input_str):
+    # Decompose all unicode characters in the original one and the accent
     nfkd_form = unicodedata.normalize('NFKD', input_str)
-    return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+    # We keep the long i as one single unicode character
+    nfkd_form = nfkd_form.replace('й', 'й')
+    return ''.join(
+        [c for c in nfkd_form if not unicodedata.combining(c)])
 
 
 def trim_lower_case(input_word: str):

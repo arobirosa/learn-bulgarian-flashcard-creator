@@ -26,6 +26,30 @@ from tkinter import simpledialog
 logger = logging.getLogger(__name__)
 
 
+class ListDialog(simpledialog.Dialog):
+    def __init__(self, parent, title, items):
+        self.items = items
+        super().__init__(parent, title)
+
+
+    def body(self, master):
+        self.listBox = tk.Listbox(master, selectmode=tk.SINGLE, width=100)
+        self.listBox.pack()
+
+        for item in self.items:
+            self.listBox.insert(tk.END, item)
+
+        return self.listBox
+
+
+    def apply(self):
+        selected_index = self.listBox.curselection()
+        if selected_index:
+            self.result = self.items[selected_index[0]]
+        else:
+            self.result = None
+
+
 def ask_user_for_translation(word_original, translated_word_original):
     """Prompts the user to correct or complete the automatic translation of the original word
 
@@ -36,7 +60,22 @@ def ask_user_for_translation(word_original, translated_word_original):
     root = tk.Tk()
     root.withdraw()  # Hide the main window
 
-    final_translation = simpledialog.askstring("Flash card creator", f'Please write the final translation for {word_original}', initialvalue=translated_word_original)
-    logger.debug(f'The user entered the final translation {final_translation} for {word_original}')
+    final_translation = simpledialog.askstring("Flash card creator",
+                                               f'Please write the final translation for {word_original}',
+                                               initialvalue=translated_word_original)
+    logger.debug(
+        f'The user entered the final translation {final_translation} for {word_original}')
     return final_translation
 
+
+def ask_user_to_choose_a_row(found_classified_words):
+    """
+    Asks the user to choose one of the words
+    :param found_classified_words: List of words found
+    :return: One row or None
+    """
+    root = tk.Tk()
+    dialog = ListDialog(root, "Choose Element", found_classified_words)
+    selected_word = dialog.result
+    logger.debug(f'The selected word is {selected_word}')
+    return selected_word

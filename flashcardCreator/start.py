@@ -36,7 +36,7 @@ import flashcardcreator.userinput
 from flashcardcreator.affix import calculate_derivative_forms_of_noun
 from flashcardcreator.translator import translate_text_to_english
 from flashcardcreator.database import insert_noun, \
-    return_first_row_of_sql_statement
+    return_rows_of_sql_statement
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
@@ -87,7 +87,7 @@ logger.debug(f'Received parameters: {global_arguments}')
 
 # Find what type of word is it together with its writing rules
 search_params = {'word_to_import': global_arguments.word_to_import}
-found_classified_word = flashcardcreator.database.return_first_row_of_sql_statement(
+found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
     GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
     SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
     FROM derivative_form as df
@@ -98,10 +98,18 @@ found_classified_word = flashcardcreator.database.return_first_row_of_sql_statem
     where df.name = :word_to_import;
 ''', search_params)
 
-if found_classified_word is None:
-    logger.info(
+if not found_classified_words:
+    logger.warning(
         f'The word {global_arguments.word_to_import} is unknown. Exiting')
     exit(1)
+elif len(found_classified_words) > 1:
+    found_classified_word = flashcardcreator.userinput.ask_user_to_choose_a_row(
+        found_classified_words)
+    if found_classified_word is None:
+        logger.warning('The user wants to exit')
+        exit(2)
+else:
+    found_classified_word = found_classified_words[0]
 
 word_id, root_word, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
 logger.debug(
@@ -118,7 +126,7 @@ word_search_parameters = {
     'wordToSearch': root_word,
     'wordId': word_id
 }
-first_found_row = return_first_row_of_sql_statement(
+found_flashcards = return_rows_of_sql_statement(
     global_arguments.flashcard_database, '''
     select a.masculineForm, a.externalWordId
     from adjetives as a
@@ -137,8 +145,8 @@ first_found_row = return_first_row_of_sql_statement(
     where vm.presentSingular1 = :wordToSearch or vm.externalWordId = :wordId
 ''', word_search_parameters)
 
-if first_found_row is not None:
-    logger.info(f'The word {root_word} has already flash cards')
+if found_flashcards:
+    logger.warning(f'The word {root_word} has already flash cards')
     exit(3)
 
 # Find translation in English for the word

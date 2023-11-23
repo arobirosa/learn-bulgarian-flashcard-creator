@@ -23,14 +23,20 @@ from flashcardcreator.database import insert_noun, \
     return_rows_of_sql_statement
 from flashcardcreator.translator import translate_text_to_english
 import flashcardcreator.userinput
+import configparser
+from flashcardcreator.affix import calculate_derivative_forms_of_noun
 import unicodedata
 import yaml
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
+CONFIG_FILENAME = 'configuration.ini'
+
 logger = logging.getLogger(__name__)
 # Location of the flashcard which can be given by the user
 flashcard_database = None
 main_debug = False
+config = configparser.ConfigParser(interpolation=None)
+config.read(CONFIG_FILENAME)
 
 
 class AbstractClassifiedWord(ABC):
@@ -109,8 +115,51 @@ class AbstractClassifiedWord(ABC):
 
 
     @abstractmethod
-    def insert_into_flashcard_database(self):
+    def _calculate_derivative_forms(self):
         pass
+
+
+    @abstractmethod
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        pass
+
+
+    def create_flashcard(self):
+        """
+        If this ClassifiedWord don't have flashcards, creates one or more flashcards.
+        If uses the grammatical database and the configuration to decide what are the irregular derivative words which are important to study.
+
+        :return: True if one or more flashcards where created
+        :rtype: bool
+        """
+        if self.exists_flashcard_for_this_word():
+            logger.warning(
+                f"The word {self._root_word} has already flash cards")
+            return False
+        elif not self._final_translation:
+            logger.warning(
+                f"The word {self._root_word} hasn''t got any translations")
+            return False
+
+        # If the word is irregular, keep only what is important to study
+        all_derivative_forms = self._calculate_derivative_forms()
+        derivative_forms_to_keep_config = flashcardcreator.main.config[
+            self._speech_part].get(str(self._word_type_id))
+        if derivative_forms_to_keep_config:
+            derivative_forms_to_keep = derivative_forms_to_keep_config.split(
+                ',')
+        else:
+            raise ValueError(
+                f'The configuration value for {self._word_type_id} inside {self._speech_part} section is missing. The derivate forms were {all_derivative_forms}')
+
+        derivative_forms_to_study = {key: all_derivative_forms[key] for key in
+                                     derivative_forms_to_keep if
+                                     key in all_derivative_forms}
+        logger.debug(
+            f'The following derivative forms are import to study {derivative_forms_to_study}')
+
+        return self._add_row_to_flashcard_database(derivative_forms_to_study)
+        # Add the word to the flashcard database
 
 
     def __str__(self):
@@ -131,10 +180,54 @@ class Noun(AbstractClassifiedWord):
                          word_type_rules, word_type_rules_test,
                          word_type_example_word)
 
-    # def __str__(self):
-    #     # Use the __str__ method of the parent class and add information about the additional field
-    #     parent_str = super().__str__()
-    #     return f"{parent_str}\nAdditional Field: {self.additional_field}"
+
+    @staticmethod
+    def _calculate_noun_gender(self):
+        match self._speech_part:
+            case 'noun_female':
+                return 'f'
+            case 'noun_neutral':
+                return 'n'
+            case 'noun_male':
+                return 'm'
+            case _:
+                raise ValueError(
+                    f'Unable to get the gender for the speech part {self._speech_part}')
+
+
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        noun_fields = {
+            'noun': self._root_word,
+            'meaningInEnglish': self._final_translation,
+            'genderAbrev': self.calculate_noun_gender(self._speech_part),
+            'irregularPluralEnding': None,
+            'irregularDefiniteArticle': None,
+            'countableEnding': None,
+            'irregularPluralWithArticle': None,
+            'countableEnding': None,
+            'externalWordId': self._word_id
+        }
+        if 'singular_definite' in derivative_forms_to_study:
+            noun_fields['irregularDefiniteArticle'] = \
+                derivative_forms_to_study[
+                    'singular_definite']
+        if 'plural_indefinite' in derivative_forms_to_study:
+            noun_fields['irregularPluralEnding'] = derivative_forms_to_study[
+                'plural_indefinite']
+        if 'plural_definite' in derivative_forms_to_study:
+            noun_fields['irregularPluralWithArticle'] = \
+                derivative_forms_to_study[
+                    'plural_definite']
+        if 'contable' in derivative_forms_to_study:
+            noun_fields['countableEnding'] = derivative_forms_to_study[
+                'contable']
+        insert_noun(flashcard_database, noun_fields)
+        return True
+
+
+    def _calculate_derivative_forms(self):
+        calculate_derivative_forms_of_noun(
+            self._root_word, self._word_type_rules, self._speech_part)
 
 
 class WordFinder:
@@ -212,7 +305,7 @@ class WordFinder:
         if not word.ask_user_for_final_translation():
             return None
         return word
-    
+
 
     @staticmethod
     def _create_classified_word_subclass(found_classified_word):

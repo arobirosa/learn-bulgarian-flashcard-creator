@@ -39,16 +39,11 @@ config.read(CONFIG_FILENAME)
 
 
 class AbstractClassifiedWord(ABC):
-    def __init__(self, word_id, root_word, word_type_id, speech_part,
-                 word_type_rules, word_type_rules_test,
-                 word_type_example_word):
+    def __init__(self, word_id, root_word, word_type_id, speech_part):
         self._word_id = word_id
         self._root_word = root_word
         self._word_type_id = word_type_id
         self._speech_part = speech_part
-        self._word_type_rules = word_type_rules
-        self._word_type_rules_test = word_type_rules_test
-        self._word_type_example_word = word_type_example_word
         self._final_translation = None
 
 
@@ -166,22 +161,11 @@ class AbstractClassifiedWord(ABC):
         return f"Word ID: {self.word_id}\n" \
                f"Root Word: {self.root_word}\n" \
                f"Word Type ID: {self.word_type_id}\n" \
-               f"Speech Part: {self.speech_part}\n" \
-               f"Word Type Rules: {self.word_type_rules}\n" \
-               f"Word Type Rules Test: {self.word_type_rules_test}\n" \
-               f"Word Type Example Word: {self.word_type_example_word}"
+               f"Speech Part: {self.speech_part}"
 
 
 class Noun(AbstractClassifiedWord):
-    def __init__(self, word_id, root_word, word_type_id, speech_part,
-                 word_type_rules, word_type_rules_test,
-                 word_type_example_word):
-        super().__init__(word_id, root_word, word_type_id, speech_part,
-                         word_type_rules, word_type_rules_test,
-                         word_type_example_word)
 
-
-    @staticmethod
     def _calculate_noun_gender(self):
         match self._speech_part:
             case 'noun_female':
@@ -199,7 +183,7 @@ class Noun(AbstractClassifiedWord):
         noun_fields = {
             'noun': self._root_word,
             'meaningInEnglish': self._final_translation,
-            'genderAbrev': self.calculate_noun_gender(self._speech_part),
+            'genderAbrev': self._calculate_noun_gender(),
             'irregularPluralEnding': None,
             'irregularDefiniteArticle': None,
             'countableEnding': None,
@@ -226,8 +210,8 @@ class Noun(AbstractClassifiedWord):
 
 
     def _calculate_derivative_forms(self):
-        calculate_derivative_forms_of_noun(
-            self._root_word, self._word_type_rules, self._speech_part)
+        return calculate_derivative_forms_of_noun(
+            self._word_id)
 
 
 class WordFinder:
@@ -264,7 +248,7 @@ class WordFinder:
         search_params = {'word_to_search': word_to_search}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-            SELECT w.id, w.name, w.type_id, wt.speech_part, wt.rules, wt.rules_test, wt.example_word
+            SELECT w.id, w.name, w.type_id, wt.speech_part
             FROM derivative_form as df
             join word as w
             on w.id = df.base_word_id
@@ -315,12 +299,10 @@ class WordFinder:
         """
         logger.debug(
             f'The word {found_classified_word[1]} is classified as {found_classified_word}')
-        word_id, root_word, word_type_id, speech_part, word_type_rules, word_type_rules_test, word_type_example_word = found_classified_word
+        word_id, root_word, word_type_id, speech_part = found_classified_word
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
-                return Noun(word_id, root_word, word_type_id, speech_part,
-                            word_type_rules, word_type_rules_test,
-                            word_type_example_word)
+                return Noun(word_id, root_word, word_type_id, speech_part)
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

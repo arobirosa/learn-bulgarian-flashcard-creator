@@ -15,5 +15,16 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
-__all__ = ["translator", "userinput", "affix", "database", "main",
-           "ponsonlinedictionary", "util"]
+
+# Contains methods related with the configuration files
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+def convert_to_absolute_path(relative_file):
+    current_script_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.abspath(
+        os.path.join(current_script_directory, "..", relative_file))
+    logger.debug(f"Absolute path: {file_path}")
+    return file_path

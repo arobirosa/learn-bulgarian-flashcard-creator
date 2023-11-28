@@ -74,9 +74,9 @@ class OnlineDictionary:
             'fm': fm_parameter,
             'q': word_or_phrase
         }
-        final_encoded_params = urlencode(final_params, encoding="utf-8"))
-
-        request = urllib.request.Request(self._server_url, headers=headers. params=final_encoded_params)
+        final_encoded_params = urlencode(final_params, encoding="utf-8")
+        final_url = f'{self._server_url}?{final_encoded_params}'
+        request = urllib.request.Request(final_url, headers=headers)
         try:
             with urllib.request.urlopen(request) as response:
                 if response.getcode() == 200:

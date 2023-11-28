@@ -18,28 +18,88 @@
 
 # It implements calls to the PONs dictionary API
 import logging
+import urllib.request
+import urllib.parse
+from urllib.parse import urlencode
+import json
 
-DEFAULT_SERVER_URL='https://api.pons.com/v1/dictionary'
-DEFAULT_LANGUAGE_PAIR='bgen'
-DEFAULT_INPUT_LANGUAGE='bg'
+_DEFAULT_SERVER_URL = 'https://api.pons.com/v1/dictionary'
+_DEFAULT_LANGUAGE_PAIR = 'bgen'
+_DEFAULT_INPUT_LANGUAGE = 'bg'
 
 logger = logging.getLogger(__name__)
 
 
+class OnlineDictionaryException(Exception):
+    def __init__(self,
+                 message="There was an error while querying the online dictionary",
+                 http_status=None):
+        self.message = message
+        self.http_status = http_status
+        super().__init__(self.message)
+
+
 class OnlineDictionary:
 
-    def __init__(self, server_url=DEFAULT_SERVER_URL, language_pair=DEFAULT_LANGUAGE_PAIR, input_language=DEFAULT_INPUT_LANGUAGE, include_examples=False) -> None:
+    def __init__(self, api_key, server_url=_DEFAULT_SERVER_URL,
+                 language_pair=_DEFAULT_LANGUAGE_PAIR,
+                 input_language=_DEFAULT_INPUT_LANGUAGE,
+                 include_examples=False) -> None:
         super().__init__()
-        self._server_url= server_url
-        self._language_pair= language_pair
-        self._input_language= input_language
-        self._include_examples= include_examples
+        self._api_key = api_key
+        self._server_url = server_url
+        self._language_pair = language_pair
+        self._input_language = input_language
+        self._include_examples = include_examples
 
-    def get_translations_from(self, word_or_phrase : str):
-        pass
+
+    def get_translations_from(self, word_or_phrase: str):
+        """
+        Returns one or multiple translations for the given word or phrase.
+
+        :param word_or_phrase: String to translate
+        :return: Translations and examples
+        """
+        headers = {
+            "X-Secret": self._api_key
+        }
+        if self._include_examples:
+            fm_parameter = 1
+        else:
+            fm_parameter = 0
+
+        final_params = {
+            'l': self._language_pair,
+            'in': self._input_language,
+            'fm': fm_parameter,
+            'q': word_or_phrase
+        }
+        final_encoded_params = urlencode(final_params, encoding="utf-8"))
+
+        request = urllib.request.Request(self._server_url, headers=headers. params=final_encoded_params)
+        try:
+            with urllib.request.urlopen(request) as response:
+                if response.getcode() == 200:
+                    json_data = json.loads(response.read().decode('utf-8'))
+                    logger.debug(f"Response: {json_data}")
+                    return json_data
+                elif response.getcode() == 204:
+                    logger.debug(
+                        f"There is no translation for {word_or_phrase}")
+                    return None
+                else:
+                    raise OnlineDictionaryException(
+                        http_status=response.getcode(),
+                        message=response.read().decode('utf-8'))
+        except urllib.error.URLError as e:
+            raise OnlineDictionaryException() from e
+        except urllib.error.HTTPError as e:
+            raise OnlineDictionaryException() from e
+
 
     def __str__(self):
         return f"Server URL: {self._server_url}\n" \
+               f"Is API Key not null?: {not self._api_key}\n" \
                f"Language Pair: {self._language_pair}\n" \
                f"Input Language: {self._input_language}\n" \
                f"Include Examples: {self._include_examples}"

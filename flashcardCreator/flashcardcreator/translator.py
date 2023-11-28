@@ -17,16 +17,18 @@
 #
 import configparser
 import logging
+from flashcardcreator.util import convert_to_absolute_path
+from flashcardcreator.ponsonlinedictionary import OnlineDictionary
 
 import deepl
 
-API_KEYS_FILENAME = 'apiKeys.ini'
-
+API_KEYS_FILENAME = convert_to_absolute_path('apiKeys.ini')
 logger = logging.getLogger(__name__)
 
 
 def init_function_create_deepl_translator():
-    logger.debug("Initialization function has been called.")
+    logger.debug(
+        "Initialization function of the DeepL translator has been called.")
     api_keys_config = configparser.ConfigParser(interpolation=None)
     api_keys_config.read(API_KEYS_FILENAME)
     deepl_api_key = api_keys_config[api_keys_config.default_section].get(
@@ -41,8 +43,24 @@ def init_function_create_deepl_translator():
                                                                    '0.0.1')
 
 
+def init_function_create_online_dictionary():
+    logger.debug(
+        "Initialization function of the online dictionary has been called.")
+    api_keys_config = configparser.ConfigParser(interpolation=None)
+    api_keys_config.read(API_KEYS_FILENAME)
+    dictionary_api_key = api_keys_config[api_keys_config.default_section].get(
+        "pons_online_dictionary")
+    if not dictionary_api_key:
+        logger.info(
+            "PONs dictionary's API key is not configured. Please visit https://en.pons.com/p/online-dictionary/developers/api and get a Free API key")
+        return None
+
+    return OnlineDictionary(api_key=dictionary_api_key)
+
+
 # The following code will run when the module is imported
 free_translator = init_function_create_deepl_translator()
+online_dictionary = init_function_create_online_dictionary()
 
 
 def translate_text_to_english(word_or_phrase_to_translate,

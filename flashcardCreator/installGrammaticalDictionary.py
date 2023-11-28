@@ -18,7 +18,6 @@
 
 # This script downloads the dictionary data, creates a local database
 
-import configparser
 import gzip
 import urllib.request
 import sqlite3

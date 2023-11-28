@@ -16,21 +16,44 @@
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 import unittest
-from flashcardcreator.affix import _calculate_all_derivative_forms
+from flashcardcreator.affix import calculate_derivative_forms_of_noun
 
 
 class TestDerivativeFormsGeneration(unittest.TestCase):
-    def test_regular_noun(self):
-        self.assertEqual(['маса', 'масата', 'маси', 'масите'],
-                         _calculate_all_derivative_forms('маса', 'а, [^аъиеоуяю]а\nа\nата\nи\nите\n-\n'))
+    def test_regular_female_noun(self):
+        self.assertEqual({'plural_definite': 'масите',
+                          'plural_indefinite': 'маси',
+                          'singular_definite': 'масата',
+                          'singular_indefinite': 'маса'},
+                         calculate_derivative_forms_of_noun(17599))
+
+
+    def test_regular_neutral_noun(self):
+        self.assertEqual({'plural_definite': 'вниманията',
+                          'plural_indefinite': 'внимания',
+                          'singular_definite': 'вниманието',
+                          'singular_indefinite': 'внимание'},
+                         calculate_derivative_forms_of_noun(78270))
+
 
     def test_regular_noun_with_irregular_plural(self):
-        self.assertEqual(['гол', 'гола', 'голът', 'голове', 'головете', 'гола'],
-                         _calculate_all_derivative_forms('гол', '0, [^аъиеоуяю]\n0\nа\nът\nове\nовете\nа\n-\n'))
+        self.assertEqual(
+            {'contable': 'гола',
+             'plural_definite': 'головете',
+             'plural_indefinite': 'голове',
+             'singular_definite': 'голът',
+             'singular_indefinite': 'гол'},
+            calculate_derivative_forms_of_noun(241))
+
 
     def test_noun_with_multiple_replacements(self):
-        self.assertEqual(['певец', 'певеца', 'певецът', 'певеци', 'певеците', 'певеца', 'певецо'],
-                         _calculate_all_derivative_forms('певец', 'е[ц]\nе?\nе?а\nе?ът\n?и\n?ите\nе?а\nо\n'))
+        self.assertEqual(
+            {'contable': 'певци',
+             'plural_definite': 'певците',
+             'plural_indefinite': 'певци',
+             'singular_definite': 'певецът',
+             'singular_indefinite': 'певец'},
+            calculate_derivative_forms_of_noun(70670))
 
 
 if __name__ == '__main__':

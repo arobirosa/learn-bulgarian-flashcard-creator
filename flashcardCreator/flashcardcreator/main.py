@@ -20,7 +20,7 @@
 import logging
 from abc import ABC, abstractmethod
 from flashcardcreator.database import insert_noun, \
-    return_rows_of_sql_statement
+    return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
 from flashcardcreator.translator import translate_text_to_english
 import flashcardcreator.userinput
 import configparser
@@ -28,7 +28,6 @@ from flashcardcreator.affix import calculate_derivative_forms_of_noun
 import unicodedata
 import yaml
 
-GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 CONFIG_FILENAME = 'configuration.ini'
 
 logger = logging.getLogger(__name__)

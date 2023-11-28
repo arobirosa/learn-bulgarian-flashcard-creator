@@ -20,8 +20,17 @@
 
 import sqlite3
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+
+def convert_to_absolute_path(relative_file):
+    current_script_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.abspath(
+        os.path.join(current_script_directory, "..", relative_file))
+    logger.debug(f"Absolute path: {file_path}")
+    return file_path
 
 
 def return_rows_of_sql_statement(database_file, sql_statement: str,
@@ -48,3 +57,7 @@ def insert_noun(database_file, noun_fields):
         db_connection.commit()
         logger.info(
             f'The noun {noun_fields["noun"]} was added to the flashcard database')
+
+
+GRAMMATICAL_DATABASE_LOCAL_FILENAME = convert_to_absolute_path(
+    'data/grammatical_dictionary.db')

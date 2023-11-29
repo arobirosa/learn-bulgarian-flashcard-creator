@@ -21,7 +21,6 @@ import logging
 # These methods calculate the derivate forms of the word's root
 from flashcardcreator.database import return_rows_of_sql_statement, \
     GRAMMATICAL_DATABASE_LOCAL_FILENAME
-import re
 
 DERIVATIVE_FORMS_DESCRIPTIONS_TO_ENGLISH_NAMES = {
     'ед.ч.': 'singular_indefinite',
@@ -29,7 +28,11 @@ DERIVATIVE_FORMS_DESCRIPTIONS_TO_ENGLISH_NAMES = {
     'ед.ч. членувано': 'singular_definite',
     'мн.ч.': 'plural_indefinite',
     'мн.ч. членувано': 'plural_definite',
-    'бройна форма': 'contable'
+    'бройна форма': 'contable',
+    'м.р.': 'masculineForm',
+    'ж.р.': 'femenineForm',
+    'ср.р.': 'neutralForm',
+    'мн.ч.': 'pluralForm'
 }
 
 logger = logging.getLogger(__name__)

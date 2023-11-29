@@ -65,10 +65,25 @@ online_dictionary = init_function_create_online_dictionary()
 
 def translate_text_to_english(word_or_phrase_to_translate,
                               debug_client_calls=False):
+    if online_dictionary is not None:
+        online_dictionary_translations = online_dictionary.get_target_single_word_translations_from(
+            word_or_phrase_to_translate)
+        if online_dictionary_translations is None:
+            logger.info(
+                f"The online dictionary don't contain any translation for {word_or_phrase_to_translate}")
+            online_dictionary_translations = []
+    else:
+        logger.info("The online dictionary is deactivated")
+        online_dictionary_translations = []
+
     if debug_client_calls:
         logging.getLogger('deepl').setLevel(logging.DEBUG)
     else:
         logging.getLogger('deepl').setLevel(logging.WARNING)
-    return free_translator.translate_text(word_or_phrase_to_translate,
-                                          source_lang='BG',
-                                          target_lang='EN-GB')
+    deep_translation = free_translator.translate_text(
+        word_or_phrase_to_translate,
+        source_lang='BG',
+        target_lang='EN-GB')
+    if not deep_translation:
+        online_dictionary_translations.append(deep_translation)
+    return ", ".join(online_dictionary_translations)

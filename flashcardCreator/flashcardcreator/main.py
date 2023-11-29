@@ -292,7 +292,9 @@ class WordFinder:
         :rtype: None or a AbstractClassifiedWord
         """
         # Find what type of word is it together with its writing rules
-        search_params = {'word_to_search': word_to_search}
+        search_params = {
+            'word_to_search': WordFinder._trim_lower_case_remove_accents(
+                word_to_search)}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
                 SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part

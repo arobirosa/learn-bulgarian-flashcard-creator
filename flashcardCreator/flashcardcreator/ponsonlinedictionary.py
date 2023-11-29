@@ -30,6 +30,22 @@ _DEFAULT_INPUT_LANGUAGE = 'bg'
 logger = logging.getLogger(__name__)
 
 
+def _extract_translations_nodes(node):
+    if isinstance(node, list):
+        # If it's a list, recursively call the function on each element
+        return [item for sublist in map(_extract_translations_nodes, node) for
+                item in sublist]
+    elif isinstance(node, dict):
+        # If it's a dictionary, check if it has the key "translations"
+        if "translations" in node:
+            return node["translations"]
+        # If it doesn't have "translations", recursively call the function on each value
+        return _extract_translations_nodes(list(node.values()))
+    else:
+        # If it's neither a list nor a dictionary, return an empty list
+        return []
+
+
 class OnlineDictionaryException(Exception):
     def __init__(self,
                  message="There was an error while querying the online dictionary",
@@ -53,9 +69,9 @@ class OnlineDictionary:
         self._include_examples = include_examples
 
 
-    def get_translations_from(self, word_or_phrase: str):
+    def get_full_response_from(self, word_or_phrase: str):
         """
-        Returns one or multiple translations for the given word or phrase.
+        Returns one or multiple hits with all the translations for the given word or phrase.
 
         :param word_or_phrase: String to translate
         :return: Translations and examples
@@ -95,6 +111,34 @@ class OnlineDictionary:
             raise OnlineDictionaryException() from e
         except urllib.error.HTTPError as e:
             raise OnlineDictionaryException() from e
+
+
+    def get_translations_from(self, word_or_phrase: str):
+        """
+        Returns all the translations including the target and source words.
+
+        :param word_or_phrase: To be translated
+        :return: None or a list of nodes containing the translations
+        """
+        full_response = self.get_full_response_from(word_or_phrase)
+        if not isinstance(full_response, list):
+            return None
+        return _extract_translations_nodes(full_response)
+
+
+    def get_target_single_word_translations_from(self, word_or_phrase: str):
+        """
+        Returns all the translations in the target language which are single words. PONSs also returns translations of meanings which include many words.
+
+        :param word_or_phrase: To be translated
+        :return: None or a set of strings
+        """
+        translations = self.get_translations_from(word_or_phrase)
+        if translations is None:
+            return None
+        return set([translation['target'] for
+                    translation in translations if
+                    ' ' not in translation['target']])
 
 
     def __str__(self):

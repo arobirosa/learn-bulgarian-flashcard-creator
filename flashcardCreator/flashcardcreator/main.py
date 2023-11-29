@@ -19,12 +19,13 @@
 # Contains the main classes
 import logging
 from abc import ABC, abstractmethod
-from flashcardcreator.database import insert_noun, \
+from flashcardcreator.database import insert_noun, insert_adjective, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
 from flashcardcreator.translator import translate_text_to_english
 import flashcardcreator.userinput
 import configparser
-from flashcardcreator.affix import calculate_derivative_forms_of_noun
+from flashcardcreator.affix import \
+    calculate_derivative_forms_with_english_field_names
 import unicodedata
 import yaml
 
@@ -109,9 +110,9 @@ class AbstractClassifiedWord(ABC):
         return True
 
 
-    @abstractmethod
     def _calculate_derivative_forms(self):
-        pass
+        return calculate_derivative_forms_with_english_field_names(
+            self._word_id)
 
 
     @abstractmethod
@@ -209,9 +210,31 @@ class Noun(AbstractClassifiedWord):
         return True
 
 
-    def _calculate_derivative_forms(self):
-        return calculate_derivative_forms_of_noun(
-            self._word_id)
+class Adjective(AbstractClassifiedWord):
+
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        adjective_fields = {
+            'masculineForm': self._root_word,
+            'meaningInEnglish': self._final_translation,
+            'femenineForm': None,
+            'neutralForm': None,
+            'pluralForm': None,
+            'externalWordId': self._word_id
+        }
+        if 'femenineForm' in derivative_forms_to_study:
+            adjective_fields['femenineForm'] = \
+                derivative_forms_to_study[
+                    'femenineForm']
+        if 'neutralForm' in derivative_forms_to_study:
+            adjective_fields['neutralForm'] = \
+                derivative_forms_to_study[
+                    'neutralForm']
+        if 'pluralForm' in derivative_forms_to_study:
+            adjective_fields['pluralForm'] = \
+                derivative_forms_to_study[
+                    'pluralForm']
+        insert_adjective(flashcard_database, adjective_fields)
+        return True
 
 
 class WordFinder:
@@ -303,6 +326,8 @@ class WordFinder:
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_type_id, speech_part)
+            case 'adjective':
+                return Adjective(word_id, root_word, word_type_id, speech_part)
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

@@ -16,7 +16,8 @@
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 import unittest
-from flashcardcreator.affix import calculate_derivative_forms_of_noun
+from flashcardcreator.affix import \
+    calculate_derivative_forms_with_english_field_names
 
 
 class TestDerivativeFormsGeneration(unittest.TestCase):
@@ -25,7 +26,8 @@ class TestDerivativeFormsGeneration(unittest.TestCase):
                           'plural_indefinite': 'маси',
                           'singular_definite': 'масата',
                           'singular_indefinite': 'маса'},
-                         calculate_derivative_forms_of_noun(17599))
+                         calculate_derivative_forms_with_english_field_names(
+                             17599))
 
 
     def test_regular_neutral_noun(self):
@@ -33,7 +35,8 @@ class TestDerivativeFormsGeneration(unittest.TestCase):
                           'plural_indefinite': 'внимания',
                           'singular_definite': 'вниманието',
                           'singular_indefinite': 'внимание'},
-                         calculate_derivative_forms_of_noun(78270))
+                         calculate_derivative_forms_with_english_field_names(
+                             78270))
 
 
     def test_regular_noun_with_irregular_plural(self):
@@ -43,7 +46,7 @@ class TestDerivativeFormsGeneration(unittest.TestCase):
              'plural_indefinite': 'голове',
              'singular_definite': 'голът',
              'singular_indefinite': 'гол'},
-            calculate_derivative_forms_of_noun(241))
+            calculate_derivative_forms_with_english_field_names(241))
 
 
     def test_noun_with_multiple_replacements(self):
@@ -53,7 +56,7 @@ class TestDerivativeFormsGeneration(unittest.TestCase):
              'plural_indefinite': 'певци',
              'singular_definite': 'певецът',
              'singular_indefinite': 'певец'},
-            calculate_derivative_forms_of_noun(70670))
+            calculate_derivative_forms_with_english_field_names(70670))
 
 
 if __name__ == '__main__':

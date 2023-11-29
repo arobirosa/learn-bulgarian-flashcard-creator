@@ -54,7 +54,7 @@ def _find_all_derivative_forms(base_word_id):
     return found_derivative_forms
 
 
-def calculate_derivative_forms_of_noun(base_word_id):
+def calculate_derivative_forms_with_english_field_names(base_word_id):
     """
     Generates all derivative forms
 

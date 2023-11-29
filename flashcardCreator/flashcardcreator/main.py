@@ -248,7 +248,7 @@ class WordFinder:
         search_params = {'word_to_search': word_to_search}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-            SELECT w.id, w.name, w.type_id, wt.speech_part
+            SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
             FROM derivative_form as df
             join word as w
             on w.id = df.base_word_id
@@ -284,7 +284,7 @@ class WordFinder:
         :rtype: None or a AbstractClassifiedWord
         """
         word = WordFinder._find_word(word_to_search)
-        if word.exists_flashcard_for_this_word():
+        if word is None or word.exists_flashcard_for_this_word():
             return None
         if not word.ask_user_for_final_translation():
             return None

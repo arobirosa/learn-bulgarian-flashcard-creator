@@ -18,7 +18,6 @@
 
 # This script downloads the dictionary data, creates a local database
 
-import configparser
 import gzip
 import urllib.request
 import sqlite3
@@ -26,7 +25,6 @@ from os.path import exists
 
 # TODO Add logging replacing the print calls
 # TODO Move this module to a package in the main application
-# TODO Internationalize user inputs
 
 # The database file located at https://rechnik.chitanka.info/db.sql.gz can only be downloaded with an interactive browser.
 # It moved it to my own hosting. It has the GPL 2 license

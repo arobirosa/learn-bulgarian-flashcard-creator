@@ -19,11 +19,6 @@
 # This script is the starting point. Process the input, ask the user for additional
 # information and stores the new word on the database with its translation
 
-# TODO Add translation with PONS
-# TODO Add translation with Mymemory https://mymemory.translated.net/doc/spec.php
-# TODO Check licenses of the dependencies
-# TODO Internationalize all prompts
-
 import argparse
 
 import logging.config

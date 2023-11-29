@@ -20,17 +20,9 @@
 
 import sqlite3
 import logging
-import os
+from flashcardcreator.util import convert_to_absolute_path
 
 logger = logging.getLogger(__name__)
-
-
-def convert_to_absolute_path(relative_file):
-    current_script_directory = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.abspath(
-        os.path.join(current_script_directory, "..", relative_file))
-    logger.debug(f"Absolute path: {file_path}")
-    return file_path
 
 
 def return_rows_of_sql_statement(database_file, sql_statement: str,

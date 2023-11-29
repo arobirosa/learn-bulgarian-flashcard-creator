@@ -20,6 +20,7 @@
 import logging
 from abc import ABC, abstractmethod
 from flashcardcreator.database import insert_noun, insert_adjective, \
+    insert_other_word_type, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
 from flashcardcreator.translator import translate_text_to_english
 import flashcardcreator.userinput
@@ -139,20 +140,22 @@ class AbstractClassifiedWord(ABC):
 
         # If the word is irregular, keep only what is important to study
         all_derivative_forms = self._calculate_derivative_forms()
-        derivative_forms_to_keep_config = flashcardcreator.main.config[
-            self._speech_part].get(str(self._word_type_id))
-        if derivative_forms_to_keep_config:
-            derivative_forms_to_keep = derivative_forms_to_keep_config.split(
-                ',')
-        else:
-            raise ValueError(
-                f'The configuration value for {self._word_type_id} inside {self._speech_part} section is missing. The derivate forms were {all_derivative_forms}')
-
-        derivative_forms_to_study = {key: all_derivative_forms[key] for key in
-                                     derivative_forms_to_keep if
-                                     key in all_derivative_forms}
-        logger.debug(
-            f'The following derivative forms are import to study {derivative_forms_to_study}')
+        derivative_forms_to_study = {}
+        if all_derivative_forms:
+            derivative_forms_to_keep_config = flashcardcreator.main.config[
+                self._speech_part].get(str(self._word_type_id))
+            if derivative_forms_to_keep_config:
+                derivative_forms_to_keep = derivative_forms_to_keep_config.split(
+                    ',')
+            else:
+                raise ValueError(
+                    f'The configuration value for {self._word_type_id} inside {self._speech_part} section is missing. The derivate forms were {all_derivative_forms}')
+            derivative_forms_to_study = {key: all_derivative_forms[key] for key
+                                         in
+                                         derivative_forms_to_keep if
+                                         key in all_derivative_forms}
+            logger.debug(
+                f'The following derivative forms are import to study {derivative_forms_to_study}')
 
         return self._add_row_to_flashcard_database(derivative_forms_to_study)
         # Add the word to the flashcard database
@@ -237,6 +240,27 @@ class Adjective(AbstractClassifiedWord):
         return True
 
 
+class WordWithoutDerivativeForms(AbstractClassifiedWord):
+    """
+    Represents adverbs, expressions and idioms
+    """
+
+
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        word_fields = {
+            'word': self._root_word,
+            'meaningInEnglish': self._final_translation,
+            'type': self._speech_part,
+            'externalWordId': self._word_id
+        }
+        insert_other_word_type(flashcard_database, word_fields)
+        return True
+
+
+    def _calculate_derivative_forms(self):
+        return {}
+
+
 class WordFinder:
 
     @staticmethod
@@ -271,13 +295,20 @@ class WordFinder:
         search_params = {'word_to_search': word_to_search}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-            SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
-            FROM derivative_form as df
-            join word as w
-            on w.id = df.base_word_id
-            join word_type as wt
-            on w.type_id = wt.id
-            where df.name = :word_to_search;
+                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
+                FROM derivative_form as df
+                    join word as w
+                    on w.id = df.base_word_id
+                    join word_type as wt
+                    on w.type_id = wt.id
+                where df.name = :word_to_search
+            UNION 
+                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
+                FROM word as w
+                    join word_type as wt
+                    on w.type_id = wt.id
+                WHERE w.name = :word_to_search
+                AND NOT EXISTS (SELECT 1 FROM derivative_form as df WHERE df.base_word_id = w.id);
         ''', search_params)
 
         if not found_classified_words:
@@ -328,6 +359,9 @@ class WordFinder:
                 return Noun(word_id, root_word, word_type_id, speech_part)
             case 'adjective':
                 return Adjective(word_id, root_word, word_type_id, speech_part)
+            case 'adverb':
+                return WordWithoutDerivativeForms(word_id, root_word,
+                                                  word_type_id, speech_part)
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

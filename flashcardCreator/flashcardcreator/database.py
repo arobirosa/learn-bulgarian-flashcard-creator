@@ -65,5 +65,19 @@ def insert_adjective(database_file, adjective_fields):
             f'The adjective {adjective_fields["masculineForm"]} was added to the flashcard database')
 
 
+def insert_other_word_type(database_file, word_fields):
+    logger.info(
+        f'Adding a flashcard for the other word with the fields: {word_fields}')
+    with sqlite3.connect(database_file) as db_connection:
+        db_cursor = db_connection.cursor()
+        db_cursor.execute('''
+        insert into otherWordTypes (word, meaningInEnglish, type, externalWordId)
+        values (:word, :meaningInEnglish, :type, :externalWordId);
+        ''', word_fields)
+        db_connection.commit()
+        logger.info(
+            f'The word {word_fields["word"]} was added to the flashcard database')
+
+
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = convert_to_absolute_path(
     'data/grammatical_dictionary.db')

@@ -8,15 +8,19 @@ TODO To complete this section
 
 ## Advantages
 
-TODO To complete this section
+You can study your own vocabulary with your own English translations using [Ankiweb](https://ankiweb.net/). You can focus on only learning the irregular forms of the nouns, adjectives, adverbs and verbs.
 
 ## Features
 
-TODO To complete this section
+* Generates flashcards for your own vocabulary. You can choose what words are important for you
+* It generates additional flashcards for the irregular forms of the word
+* Searches for the translation in English on [DeepL](https://www.deepl.com/translator) and [PONS's online dictionary](https://en.pons.com/translate/bulgarian-english/) and you can modify and extend those translations
+* Stores the flashcards in a database which you can modify manually using the [SQLite Database Browser](https://sqlitebrowser.org/)
 
 ## Limitations
 
-TODO To complete this section
+* Only irregular forms which are in the [grammar dictionary](https://rechnik.chitanka.info/w) are identified
+* You have to enter your own vocabulary. If you want to spare time by creating the deck, you can use [Ankiweb's decks with Bulgarian vocabulary](https://ankiweb.net/shared/decks?search=bulgarian)
 
 # Getting stated
 
@@ -36,7 +40,9 @@ TODO To complete this section
 
 ## FAQ
 
-TODO To complete this section
+* Is is possible to use other translation services or online dictionaries?
+
+Yes, please create a feature request explaining what are the advantages over DeepL and PONS. If I have time, I will do the connection
 
 ## Troubleshooting
 

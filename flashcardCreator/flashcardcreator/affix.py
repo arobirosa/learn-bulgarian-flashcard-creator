@@ -35,17 +35,7 @@ DERIVATIVE_FORMS_DESCRIPTIONS_TO_ENGLISH_NAMES = {
     'мн.ч.': 'pluralForm'
 }
 
-VERB_DERIVATIVE_FORMS_WHICH_MIGHT_BE_IRREGULAR = (
-    # Сегашно време
-    'сег.вр., 1л., ед.ч.',
-    'сег.вр., 2л., ед.ч.',
-    'сег.вр., 3л., мн.ч.',  # Some "я" mutate to "е" or "а" like ям
-    # Минало свършено време (аорист)
-    'мин.св.вр., 1л., ед.ч.',
-    'мин.св.вр., 2л., ед.ч.',
-    # Минало несвършено време (имперфект)
-    'мин.несв.вр., 1л., ед.ч.',
-    'мин.несв.вр., 1л., мн.ч.',
+VERB_PARTICIPLES_WHICH_MIGHT_BE_IRREGULAR = (
     #  Причастия (отглаголни прилагателни)
     'мин.деят.св.прич. м.р.',
     'мин.деят.св.прич. ж.р.',
@@ -57,9 +47,22 @@ VERB_DERIVATIVE_FORMS_WHICH_MIGHT_BE_IRREGULAR = (
     'мин.страд.прич. ср.р.',
     'сег.деят.прич. м.р.',
     'деепричастие'
+)
+
+VERB_DERIVATIVE_FORMS_WHICH_MIGHT_BE_IRREGULAR = (
+    # Сегашно време
+    'сег.вр., 1л., ед.ч.',
+    'сег.вр., 2л., ед.ч.',
+    'сег.вр., 3л., мн.ч.',  # Some "я" mutate to "е" or "а" like ям
+    # Минало свършено време (аорист)
+    'мин.св.вр., 1л., ед.ч.',
+    'мин.св.вр., 2л., ед.ч.',
+    # Минало несвършено време (имперфект)
+    'мин.несв.вр., 1л., ед.ч.',
+    'мин.несв.вр., 2л., ед.ч.',
     # Imperative
     'повелително наклонение, ед.ч.',
-    'повелително наклонение, мн.ч.',
+    'повелително наклонение, мн.ч.'
 )
 
 logger = logging.getLogger(__name__)
@@ -117,6 +120,18 @@ def calculate_derivative_forms_from_verb(base_word_id):
     derivative_forms = {
         description_bg: derivative_form for derivative_form, description_bg in
         all_derivative_forms
-        if description_bg in VERB_DERIVATIVE_FORMS_WHICH_MIGHT_BE_IRREGULAR}
+        if
+        description_bg in VERB_DERIVATIVE_FORMS_WHICH_MIGHT_BE_IRREGULAR or description_bg in VERB_PARTICIPLES_WHICH_MIGHT_BE_IRREGULAR}
     logger.debug(f'Derivative forms of the verb {derivative_forms}')
     return derivative_forms
+
+
+def filter_verb_participles(derivative_forms_to_study):
+    """
+    It returns the keys containing the verb participles if the are present in the derivative forms to study
+    :param derivative_forms_to_study: Required. Dictionary with the derivative forms
+    :return: Verb participles
+    """
+    return {participle: derivative_form for participle, derivative_form in
+            derivative_forms_to_study
+            if participle in VERB_PARTICIPLES_WHICH_MIGHT_BE_IRREGULAR}

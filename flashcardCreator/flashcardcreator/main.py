@@ -27,10 +27,11 @@ import yaml
 import flashcardcreator.userinput
 from flashcardcreator.affix import \
     calculate_derivative_forms_with_english_field_names, \
-    calculate_derivative_forms_from_verb
+    calculate_derivative_forms_from_verb, filter_verb_participles
 from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_other_word_type, \
-    return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
+    return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME, \
+    insert_verb_meaning, insert_verb_tense
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
@@ -245,13 +246,74 @@ class Adjective(AbstractClassifiedWord):
 
 class Verb(AbstractClassifiedWord):
     """
-    Represents adverbs, expressions and idioms
+    Represents verbs
     """
 
 
-    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
-        pass
+    def _insert_participles(self, derivative_forms_to_study):
+        verb_participles = filter_verb_participles(derivative_forms_to_study)
+        for participle_name, derivative_form in verb_participles:
+            word_fields = {
+                'word': derivative_form,
+                'meaningInEnglish': self._final_translation,
+                'type': participle_name,
+                'externalWordId': self._word_id
+            }
+            insert_other_word_type(flashcard_database, word_fields)
 
+
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        insert_verb_meaning(flashcard_database, self._final_translation,
+                            self._word_id, self._root_word)
+        # Сегашно време
+        insert_verb_tense(flashcard_database,
+                          present_singular1=self._root_word, tense='p',
+                          imperfect=not self._is_terminative(),
+                          singular1=self._root_word,
+                          singular2=derivative_forms_to_study[
+                              'сег.вр., 2л., ед.ч.'],
+                          plural3=derivative_forms_to_study[
+                              'сег.вр., 3л., мн.ч.'])
+        # Минало свършено време (аорист)
+        if 'мин.св.вр., 1л., ед.ч.' in derivative_forms_to_study or \
+                'мин.св.вр., 2л., ед.ч.' in derivative_forms_to_study:
+            insert_verb_tense(flashcard_database,
+                              present_singular1=self._root_word, tense='a',
+                              imperfect=not self._is_terminative(),
+                              singular1=derivative_forms_to_study[
+                                  'мин.св.вр., 1л., ед.ч.'],
+                              singular2=derivative_forms_to_study[
+                                  'мин.св.вр., 2л., ед.ч.'],
+                              plural3=None)
+
+        # Минало несвършено време (имперфект)
+        if not self._is_terminative() and (
+                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study or \
+                'мин.несв.вр., 2л., ед.ч.' in derivative_forms_to_study):
+            insert_verb_tense(flashcard_database,
+                              present_singular1=self._root_word, tense='i',
+                              imperfect=not self._is_terminative(),
+                              singular1=derivative_forms_to_study[
+                                  'мин.несв.вр., 1л., ед.ч.'],
+                              singular2=derivative_forms_to_study[
+                                  'мин.несв.вр., 1л., мн.ч.'],
+                              plural3=None)
+
+        # Причастия (отглаголни прилагателни)
+        _insert_participles(derivative_forms_to_study)
+
+        # Imperative
+        if 'повелително наклонение, ед.ч.' in derivative_forms_to_study or \
+                'повелително наклонение, мн.ч.' in derivative_forms_to_study:
+            insert_verb_tense(flashcard_database,
+                              present_singular1=self._root_word, tense='!',
+                              imperfect=not self._is_terminative(),
+                              singular1=None,
+                              singular2=derivative_forms_to_study[
+                                  'повелително наклонение, ед.ч.'],
+                              plural2=derivative_forms_to_study[
+                                  'повелително наклонение, мн.ч.'],
+                              plural3=None)
 
     def _calculate_derivative_forms(self):
         return calculate_derivative_forms_from_verb(self._word_id)

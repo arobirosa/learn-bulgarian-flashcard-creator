@@ -65,6 +65,37 @@ def insert_adjective(database_file, adjective_fields):
             f'The adjective {adjective_fields["masculineForm"]} was added to the flashcard database')
 
 
+def insert_verb_meaning(database_file, meaning_in_english, external_word_id,
+                        present_singular1):
+    logger.info(
+        f'Adding a flashcard for the verb with the presentSingular1 fields: {present_singular1}')
+    with sqlite3.connect(database_file) as db_connection:
+        db_cursor = db_connection.cursor()
+        db_cursor.execute('''
+        insert into verbMeanings (meaningInEnglish, externalWordId, presentSingular1)
+        values (?, ?, ?);
+        ''', meaning_in_english, external_word_id, present_singular1)
+        db_connection.commit()
+        logger.info(
+            f'The meaning of the verb {present_singular1} was added to the flashcard database')
+
+
+def insert_verb_tense(database_file, present_singular1, tense, imperfect,
+                      singular1, singular2, plural3, plural2=None):
+    logger.info(
+        f'Adding a flashcard for the verb with the presentSingular1 fields: {present_singular1}')
+    with sqlite3.connect(database_file) as db_connection:
+        db_cursor = db_connection.cursor()
+        db_cursor.execute('''
+        insert into verbs4 (presentSingular1, tense, imperfect, singular1, singular2, pplural2, plural3)
+        values (?, ?, ?, ?, ?, ?, ?);
+                ''', present_singular1, tense, imperfect, singular1, singular2,
+                          plural2, plural3)
+        db_connection.commit()
+        logger.info(
+            f'The tense {tense} of the verb {present_singular1} was added to the flashcard database')
+
+
 def insert_other_word_type(database_file, word_fields):
     logger.info(
         f'Adding a flashcard for the other word with the fields: {word_fields}')

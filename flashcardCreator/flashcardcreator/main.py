@@ -16,19 +16,21 @@
 #  along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 
+import configparser
 # Contains the main classes
 import logging
+import unicodedata
 from abc import ABC, abstractmethod
+
+import yaml
+
+import flashcardcreator.userinput
+from flashcardcreator.affix import \
+    calculate_derivative_forms_with_english_field_names
 from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_other_word_type, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
 from flashcardcreator.translator import translate_text_to_english
-import flashcardcreator.userinput
-import configparser
-from flashcardcreator.affix import \
-    calculate_derivative_forms_with_english_field_names
-import unicodedata
-import yaml
 
 CONFIG_FILENAME = 'configuration.ini'
 
@@ -146,7 +148,7 @@ class AbstractClassifiedWord(ABC):
                 self._speech_part].get(str(self._word_type_id))
             if derivative_forms_to_keep_config:
                 derivative_forms_to_keep = derivative_forms_to_keep_config.split(
-                    ',')
+                    '|')
             else:
                 raise ValueError(
                     f'The configuration value for {self._word_type_id} inside {self._speech_part} section is missing. The derivate forms were {all_derivative_forms}')

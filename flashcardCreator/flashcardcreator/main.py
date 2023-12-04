@@ -21,6 +21,7 @@ import configparser
 import logging
 import unicodedata
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 import yaml
 
@@ -251,6 +252,8 @@ class Verb(AbstractClassifiedWord):
 
 
     def _insert_participles(self, derivative_forms_to_study):
+        if not derivative_forms_to_study:
+            return
         verb_participles = filter_verb_participles(derivative_forms_to_study)
         for participle_name, derivative_form in verb_participles:
             word_fields = {
@@ -263,57 +266,68 @@ class Verb(AbstractClassifiedWord):
 
 
     def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        # Причастия (отглаголни прилагателни)
+        self._insert_participles(derivative_forms_to_study)
+
+        # Meaning
         insert_verb_meaning(flashcard_database, self._final_translation,
                             self._word_id, self._root_word)
+
+        derivative_forms_to_study_with_defaults = defaultdict(lambda: None)
+        derivative_forms_to_study_with_defaults.update(
+            derivative_forms_to_study)
         # Сегашно време
         insert_verb_tense(flashcard_database,
                           present_singular1=self._root_word, tense='p',
                           imperfect=not self._is_terminative(),
                           singular1=self._root_word,
-                          singular2=derivative_forms_to_study[
+                          singular2=derivative_forms_to_study_with_defaults[
                               'сег.вр., 2л., ед.ч.'],
-                          plural3=derivative_forms_to_study[
+                          plural3=derivative_forms_to_study_with_defaults[
                               'сег.вр., 3л., мн.ч.'])
         # Минало свършено време (аорист)
-        if 'мин.св.вр., 1л., ед.ч.' in derivative_forms_to_study or \
-                'мин.св.вр., 2л., ед.ч.' in derivative_forms_to_study:
+        if 'мин.св.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or \
+                'мин.св.вр., 2л., ед.ч.' in derivative_forms_to_study_with_defaults:
             insert_verb_tense(flashcard_database,
                               present_singular1=self._root_word, tense='a',
                               imperfect=not self._is_terminative(),
-                              singular1=derivative_forms_to_study[
+                              singular1=
+                              derivative_forms_to_study_with_defaults[
                                   'мин.св.вр., 1л., ед.ч.'],
-                              singular2=derivative_forms_to_study[
+                              singular2=
+                              derivative_forms_to_study_with_defaults[
                                   'мин.св.вр., 2л., ед.ч.'],
                               plural3=None)
 
         # Минало несвършено време (имперфект)
         if not self._is_terminative() and (
-                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study or \
-                'мин.несв.вр., 2л., ед.ч.' in derivative_forms_to_study):
+                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or \
+                'мин.несв.вр., 2л., ед.ч.' in derivative_forms_to_study_with_defaults):
             insert_verb_tense(flashcard_database,
                               present_singular1=self._root_word, tense='i',
                               imperfect=not self._is_terminative(),
-                              singular1=derivative_forms_to_study[
+                              singular1=
+                              derivative_forms_to_study_with_defaults[
                                   'мин.несв.вр., 1л., ед.ч.'],
-                              singular2=derivative_forms_to_study[
+                              singular2=
+                              derivative_forms_to_study_with_defaults[
                                   'мин.несв.вр., 1л., мн.ч.'],
                               plural3=None)
 
-        # Причастия (отглаголни прилагателни)
-        _insert_participles(derivative_forms_to_study)
-
         # Imperative
-        if 'повелително наклонение, ед.ч.' in derivative_forms_to_study or \
-                'повелително наклонение, мн.ч.' in derivative_forms_to_study:
+        if 'повелително наклонение, ед.ч.' in derivative_forms_to_study_with_defaults or \
+                'повелително наклонение, мн.ч.' in derivative_forms_to_study_with_defaults:
             insert_verb_tense(flashcard_database,
                               present_singular1=self._root_word, tense='!',
                               imperfect=not self._is_terminative(),
                               singular1=None,
-                              singular2=derivative_forms_to_study[
+                              singular2=
+                              derivative_forms_to_study_with_defaults[
                                   'повелително наклонение, ед.ч.'],
-                              plural2=derivative_forms_to_study[
+                              plural2=derivative_forms_to_study_with_defaults[
                                   'повелително наклонение, мн.ч.'],
                               plural3=None)
+
 
     def _calculate_derivative_forms(self):
         return calculate_derivative_forms_from_verb(self._word_id)

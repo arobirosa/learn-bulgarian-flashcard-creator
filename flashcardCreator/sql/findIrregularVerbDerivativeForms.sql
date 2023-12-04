@@ -188,4 +188,19 @@ from derivative_form df2s
                         and df_other.name <> df2s.name /** There are 37 verbs with the 1. singular in all derivative forms**/
                         and df_other.name <> df2s.name || 'а'
 where df2s.description = 'мин.несв.вр., 1л., ед.ч.'
+
+/** Причастия (отглаголни прилагателни) **/
+union all
+select df2s.name singular2, wt.speech_part, df_other.name, df_other.description
+from derivative_form df2s
+         inner join word w
+                    on w.id = df2s.base_word_id
+         inner join word_type wt
+                    on wt.id = w.type_id
+         inner join derivative_form df_other
+                    on w.id = df_other.base_word_id
+                        and df_other.description = 'сег.деят.прич. м.р. пълен член'
+                        and df_other.name <> df2s.name /** There are 37 verbs with the 1. singular in all derivative forms**/
+                        and df_other.name <> df2s.name || 'ият'
+where df2s.description = 'сег.деят.прич. м.р.'
 ;

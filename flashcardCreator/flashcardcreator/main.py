@@ -26,7 +26,8 @@ import yaml
 
 import flashcardcreator.userinput
 from flashcardcreator.affix import \
-    calculate_derivative_forms_with_english_field_names
+    calculate_derivative_forms_with_english_field_names, \
+    calculate_derivative_forms_from_verb
 from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_other_word_type, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME
@@ -242,6 +243,35 @@ class Adjective(AbstractClassifiedWord):
         return True
 
 
+class Verb(AbstractClassifiedWord):
+    """
+    Represents adverbs, expressions and idioms
+    """
+
+
+    def _add_row_to_flashcard_database(self, derivative_forms_to_study):
+        pass
+
+
+    def _calculate_derivative_forms(self):
+        return calculate_derivative_forms_from_verb(self._word_id)
+
+
+    def _is_terminative(self):
+        """
+        Returns is this verb, глагол, is of typ "свършен вид"
+        :return: True if is of typ "свършен вид"
+        """
+        match self._speech_part:
+            case 'verb_intransitive_imperfective' | 'verb_transitive_imperfective':
+                return False
+            case 'verb_intransitive_terminative' | 'verb_transitive_terminative':
+                return True
+            case _:
+                raise ValueError(
+                    f'The verb {self._root_word} has the speech part {self._speech_part} and it is unclear if it is a terminative verb')
+
+
 class WordWithoutDerivativeForms(AbstractClassifiedWord):
     """
     Represents adverbs, expressions and idioms
@@ -366,6 +396,9 @@ class WordFinder:
             case 'adverb':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_type_id, speech_part)
+            case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative':
+                return Verb(word_id, root_word,
+                            word_type_id, speech_part)
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

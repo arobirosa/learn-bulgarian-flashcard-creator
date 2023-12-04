@@ -65,47 +65,61 @@ def insert_adjective(database_file, adjective_fields):
             f'The adjective {adjective_fields["masculineForm"]} was added to the flashcard database')
 
 
-def insert_verb_meaning(database_file, meaning_in_english, external_word_id,
-                        present_singular1):
+def insert_verb_meaning_with_cursor(db_cursor, meaning_in_english,
+                                    external_word_id,
+                                    present_singular1):
     logger.info(
         f'Adding a flashcard for the verb meaning with the presentSingular1 fields: {present_singular1}')
-    with sqlite3.connect(database_file) as db_connection:
-        db_cursor = db_connection.cursor()
-        db_cursor.execute('''
-        insert into verbMeanings (meaningInEnglish, externalWordId, presentSingular1)
-        values (?, ?, ?);
-        ''', (meaning_in_english, external_word_id, present_singular1))
-        db_connection.commit()
-        logger.info(
-            f'The meaning of the verb meaning {present_singular1} was added to the flashcard database')
+    db_cursor.execute('''
+    insert into verbMeanings (meaningInEnglish, externalWordId, presentSingular1)
+    values (?, ?, ?);
+    ''', (meaning_in_english, external_word_id, present_singular1))
+    logger.info(
+        f'The meaning of the verb meaning {present_singular1} was added to the flashcard database')
 
 
-def insert_verb_tense(database_file, present_singular1, tense, imperfect,
-                      singular1, singular2, plural3, plural2=None):
+def insert_other_word_type_with_cursor(db_cursor, word_fields):
+    db_cursor.execute('''
+        insert into otherWordTypes (word, meaningInEnglish, type, externalWordId)
+        values (:word, :meaningInEnglish, :type, :externalWordId);
+        ''', word_fields)
+
+
+def insert_participles_with_cursor(db_cursor, derivative_forms_to_study,
+                                   final_translation, word_id):
+    if not derivative_forms_to_study:
+        return
+    verb_participles = filter_verb_participles(derivative_forms_to_study)
+    for participle_name, derivative_form in verb_participles:
+        word_fields = {
+            'word': derivative_form,
+            'meaningInEnglish': final_translation,
+            'type': participle_name,
+            'externalWordId': word_id
+        }
+    insert_other_word_type_with_cursor(db_cursor, word_fields)
+
+
+def insert_verb_tense_with_cursor(db_cursor, present_singular1, tense,
+                                  imperfect,
+                                  singular1, singular2, plural3, plural2=None):
     logger.info(
         f'Adding a flashcard for the verb tense {tense} with the presentSingular1 fields: {present_singular1}')
-    with sqlite3.connect(database_file) as db_connection:
-        db_cursor = db_connection.cursor()
-        db_cursor.execute('''
-        insert into verbs4 (presentSingular1, tense, imperfect, singular1, singular2, plural2, plural3)
-        values (?, ?, ?, ?, ?, ?, ?);
-                ''', (
-            present_singular1, tense, imperfect, singular1, singular2,
-            plural2, plural3))
-        db_connection.commit()
-        logger.info(
-            f'The tense {tense} of the verb {present_singular1} was added to the flashcard database')
-
+    db_cursor.execute('''
+    insert into verbs4 (presentSingular1, tense, imperfect, singular1, singular2, plural2, plural3)
+    values (?, ?, ?, ?, ?, ?, ?);
+            ''', (
+        present_singular1, tense, imperfect, singular1, singular2,
+        plural2, plural3))
+    logger.info(
+        f'The tense {tense} of the verb {present_singular1} was added to the flashcard database')
 
 def insert_other_word_type(database_file, word_fields):
     logger.info(
         f'Adding a flashcard for the other word with the fields: {word_fields}')
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
-        db_cursor.execute('''
-        insert into otherWordTypes (word, meaningInEnglish, type, externalWordId)
-        values (:word, :meaningInEnglish, :type, :externalWordId);
-        ''', word_fields)
+        insert_other_word_type_with_cursor(db_cursor, word_fields)
         db_connection.commit()
         logger.info(
             f'The word {word_fields["word"]} was added to the flashcard database')

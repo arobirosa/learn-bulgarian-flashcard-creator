@@ -456,7 +456,8 @@ class WordFinder:
         # We keep the long i as one single unicode character
         nfkd_form = nfkd_form.replace('й', 'й')
         return ''.join(
-            [c for c in nfkd_form if not unicodedata.combining(c)])
+            [c for c in nfkd_form if
+             c != '`' and not unicodedata.combining(c)])
 
 
     @staticmethod
@@ -479,7 +480,7 @@ class WordFinder:
                 word_to_search)}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-                SELECT DISTINCT w.id, w.name, w.meaning, w.type_id, wt.speech_part
+                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
                 FROM derivative_form as df
                     join word as w
                     on w.id = df.base_word_id
@@ -487,7 +488,7 @@ class WordFinder:
                     on w.type_id = wt.id
                 where df.name = :word_to_search
             UNION 
-                SELECT DISTINCT w.id, w.name, w.meaning, w.type_id, wt.speech_part
+                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
                 FROM word as w
                     join word_type as wt
                     on w.type_id = wt.id
@@ -537,7 +538,7 @@ class WordFinder:
         """
         logger.debug(
             f'The word {found_classified_word[1]} is classified as {found_classified_word}')
-        word_id, root_word, word_meaning, word_type_id, speech_part = found_classified_word
+        word_id, root_word, word_type_id, speech_part, word_meaning = found_classified_word
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_meaning, word_type_id,

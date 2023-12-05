@@ -111,6 +111,7 @@ def insert_verb_tense_with_cursor(db_cursor, present_singular1, tense,
     logger.info(
         f'The tense {tense} of the verb {present_singular1} was added to the flashcard database')
 
+
 def insert_other_word_type(database_file, word_fields):
     logger.info(
         f'Adding a flashcard for the other word with the fields: {word_fields}')
@@ -120,6 +121,35 @@ def insert_other_word_type(database_file, word_fields):
         db_connection.commit()
         logger.info(
             f'The word {word_fields["word"]} was added to the flashcard database')
+
+
+def verb_pair_exists(db_cursor, terminative_verb, imperfective_verb):
+    """
+    Returns if the given verb pair already exists.
+    The transaction management must be done by the calller.
+
+    :param db_cursor: Required. Open cursor.
+    :param terminative_verb: Required. Verb's root word
+    :param imperfective_verb: Required.  Verb's root word
+    :return: True or False
+    """
+    db_cursor.execute('''
+        SELECT 1
+        FROM verbsPairs
+        WHERE terminativeVerb = ?
+        AND imperfectVerb = ?;
+    ''', (terminative_verb, imperfective_verb))
+    return not db_cursor.fetchone()
+
+
+def verb_pair_insert(db_cursor, terminative_verb, imperfective_verb):
+    logger.info(
+        f'Adding a verb pair with terminative verb {terminative_verb} and imperfective verb {imperfective_verb}')
+    db_cursor.execute('''
+        insert into verbsPairs (terminativeVerb, imperfectVerb)
+        values (?, ?);
+                ''', (terminative_verb, imperfective_verb))
+    logger.info('The verb pair was added to the flashcard database')
 
 
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = convert_to_absolute_path(

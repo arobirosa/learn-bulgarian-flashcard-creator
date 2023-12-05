@@ -54,3 +54,4 @@ if found_word is None:
     exit(1)
 
 found_word.create_flashcard()
+found_word.create_flashcards_for_linked_words()

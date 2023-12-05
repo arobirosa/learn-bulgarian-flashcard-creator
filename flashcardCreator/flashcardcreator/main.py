@@ -23,18 +23,20 @@ import sqlite3
 import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
+import re
 
 import yaml
 
 import flashcardcreator.userinput
+from flashcardcreator.affix import \
+    calculate_derivative_forms_with_english_field_names, \
+    calculate_derivative_forms_from_verb, filter_verb_participles
 from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_other_word_type, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME, \
     insert_participles_with_cursor, \
-    insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor
-from flashcardcreator.affix import \
-    calculate_derivative_forms_with_english_field_names, \
-    calculate_derivative_forms_from_verb, filter_verb_participles
+    insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor, \
+    verb_pair_exists, verb_pair_insert
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
@@ -47,8 +49,9 @@ config = configparser.ConfigParser(interpolation=None)
 config.read(CONFIG_FILENAME)
 
 
-def insert_verb(database_file, derivative_forms_to_study, root_word,
-                final_translation, word_id, is_terminative):
+def _insert_verb(database_file, derivative_forms_to_study, root_word,
+                 final_translation, word_id, is_terminative,
+                 linked_verb_present_singular1):
     """
     Insert the verb in all required tables. It runs in a single transaction.
 
@@ -58,6 +61,7 @@ def insert_verb(database_file, derivative_forms_to_study, root_word,
     :param derivative_forms_to_study: All derivative forms which are irregular
     :param final_translation: Translation in English accepted by the use
     :param database_file: Required.
+    :param linked_verb_present_singular1: Optional. String with the singular in first person in present
     :return:
     """
     logger.info(
@@ -135,18 +139,33 @@ def insert_verb(database_file, derivative_forms_to_study, root_word,
                                               'повелително наклонение, мн.ч.'],
                                           plural3=None)
 
+        if linked_verb_present_singular1:
+            if is_terminative:
+                terminative_verb = root_word
+                imperfective_verb = linked_verb_present_singular1
+            else:
+                terminative_verb = linked_verb_present_singular1
+                imperfective_verb = root_word
+            if not verb_pair_exists(db_cursor, terminative_verb,
+                                    imperfective_verb):
+                verb_pair_insert(db_cursor, terminative_verb,
+                                 imperfective_verb)
+
         db_connection.commit()
         logger.info(
             f'The verb {root_word} was added to all required tables')
 
 
 class AbstractClassifiedWord(ABC):
-    def __init__(self, word_id, root_word, word_type_id, speech_part):
+    def __init__(self, word_id, root_word, word_meaning, word_type_id,
+                 speech_part):
         self._word_id = word_id
         self._root_word = root_word
+        self._meaning = word_meaning
         self._word_type_id = word_type_id
         self._speech_part = speech_part
         self._final_translation = None
+        self.linked_word = None
 
 
     def exists_flashcard_for_this_word(self):
@@ -211,6 +230,25 @@ class AbstractClassifiedWord(ABC):
         return True
 
 
+    def create_flashcards_for_linked_words(self):
+        """
+        If the word is linked to other words, import those words if there aren't any flashcards for them.
+        This imports the pairs of perfective and imperfective verbs
+        :return: None
+        """
+        linked_words = self._get_linked_words()
+        new_words = [WordFinder.find_word_with_english_translation(word) for
+                     word in linked_words]
+        # Remove all Nones from existing words
+        new_words_to_import = [classifiedWord for classifiedWord in new_words
+                               if classifiedWord]
+        for word_to_import in new_words_to_import:
+            word_to_import.linked_word = self._root_word
+            word_to_import.create_flashcard()
+        for word_to_import in new_words_to_import:
+            word_to_import.create_flashcards_for_linked_words()
+
+
     def _calculate_derivative_forms(self):
         return calculate_derivative_forms_with_english_field_names(
             self._word_id)
@@ -266,6 +304,19 @@ class AbstractClassifiedWord(ABC):
                f"Root Word: {self.root_word}\n" \
                f"Word Type ID: {self.word_type_id}\n" \
                f"Speech Part: {self.speech_part}"
+
+
+    def _get_linked_words(self):
+        """
+        Returns all the words surrounded by double brackets
+        :return: List of words or empty list
+        """
+        if not self._meaning:
+            return []
+        matches = re.findall(r'\[\[([^\[\]]+)\]\]', self._meaning)
+        logger.debug(
+            f"Extract the linked words {matches} from the meaning {self._meaning}")
+        return matches
 
 
 class Noun(AbstractClassifiedWord):
@@ -347,9 +398,9 @@ class Verb(AbstractClassifiedWord):
 
 
     def _add_row_to_flashcard_database(self, derivative_forms_to_study):
-        insert_verb(flashcard_database, derivative_forms_to_study,
-                    self._root_word, self._final_translation,
-                    self._word_id, self._is_terminative())
+        _insert_verb(flashcard_database, derivative_forms_to_study,
+                     self._root_word, self._final_translation,
+                     self._word_id, self._is_terminative(), self.linked_word)
 
 
     def _calculate_derivative_forms(self):
@@ -428,7 +479,7 @@ class WordFinder:
                 word_to_search)}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
-                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
+                SELECT DISTINCT w.id, w.name, w.meaning, w.type_id, wt.speech_part
                 FROM derivative_form as df
                     join word as w
                     on w.id = df.base_word_id
@@ -436,7 +487,7 @@ class WordFinder:
                     on w.type_id = wt.id
                 where df.name = :word_to_search
             UNION 
-                SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part
+                SELECT DISTINCT w.id, w.name, w.meaning, w.type_id, wt.speech_part
                 FROM word as w
                     join word_type as wt
                     on w.type_id = wt.id
@@ -486,17 +537,20 @@ class WordFinder:
         """
         logger.debug(
             f'The word {found_classified_word[1]} is classified as {found_classified_word}')
-        word_id, root_word, word_type_id, speech_part = found_classified_word
+        word_id, root_word, word_meaning, word_type_id, speech_part = found_classified_word
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
-                return Noun(word_id, root_word, word_type_id, speech_part)
+                return Noun(word_id, root_word, word_meaning, word_type_id,
+                            speech_part)
             case 'adjective':
-                return Adjective(word_id, root_word, word_type_id, speech_part)
+                return Adjective(word_id, root_word, word_meaning,
+                                 word_type_id, speech_part)
             case 'adverb':
                 return WordWithoutDerivativeForms(word_id, root_word,
+                                                  word_meaning,
                                                   word_type_id, speech_part)
             case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative':
-                return Verb(word_id, root_word,
+                return Verb(word_id, root_word, word_meaning,
                             word_type_id, speech_part)
             case _:
                 raise ValueError(

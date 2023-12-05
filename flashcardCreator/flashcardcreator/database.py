@@ -123,7 +123,7 @@ def insert_other_word_type(database_file, word_fields):
             f'The word {word_fields["word"]} was added to the flashcard database')
 
 
-def verb_pair_exists(db_cursor, terminative_verb, imperfective_verb):
+def verb_pair_not_exists(db_cursor, terminative_verb, imperfective_verb):
     """
     Returns if the given verb pair already exists.
     The transaction management must be done by the calller.
@@ -139,7 +139,7 @@ def verb_pair_exists(db_cursor, terminative_verb, imperfective_verb):
         WHERE terminativeVerb = ?
         AND imperfectVerb = ?;
     ''', (terminative_verb, imperfective_verb))
-    return not db_cursor.fetchone()
+    return db_cursor.fetchone() is None
 
 
 def verb_pair_insert(db_cursor, terminative_verb, imperfective_verb):

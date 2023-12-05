@@ -36,7 +36,7 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
     return_rows_of_sql_statement, GRAMMATICAL_DATABASE_LOCAL_FILENAME, \
     insert_participles_with_cursor, \
     insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor, \
-    verb_pair_exists, verb_pair_insert
+    verb_pair_not_exists, verb_pair_insert
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
@@ -146,7 +146,7 @@ def _insert_verb(database_file, derivative_forms_to_study, root_word,
             else:
                 terminative_verb = linked_verb_present_singular1
                 imperfective_verb = root_word
-            if not verb_pair_exists(db_cursor, terminative_verb,
+            if verb_pair_not_exists(db_cursor, terminative_verb,
                                     imperfective_verb):
                 verb_pair_insert(db_cursor, terminative_verb,
                                  imperfective_verb)

@@ -87,7 +87,7 @@ def insert_other_word_type_with_cursor(db_cursor, word_fields):
 
 def insert_participles_with_cursor(db_cursor, verb_participles,
                                    final_translation, word_id):
-    for participle_name, derivative_form in verb_participles:
+    for participle_name, derivative_form in verb_participles.items():
         word_fields = {
             'word': derivative_form,
             'meaningInEnglish': final_translation,

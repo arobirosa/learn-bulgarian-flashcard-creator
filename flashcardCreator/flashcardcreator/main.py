@@ -34,7 +34,7 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor
 from flashcardcreator.affix import \
     calculate_derivative_forms_with_english_field_names, \
-    calculate_derivative_forms_from_verb
+    calculate_derivative_forms_from_verb, filter_verb_participles
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
@@ -65,7 +65,8 @@ def insert_verb(database_file, derivative_forms_to_study, root_word,
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
         # Причастия (отглаголни прилагателни)
-        insert_participles_with_cursor(db_cursor, derivative_forms_to_study,
+        verb_participles = filter_verb_participles(derivative_forms_to_study)
+        insert_participles_with_cursor(db_cursor, verb_participles,
                                        final_translation, word_id)
 
         # Meaning
@@ -115,7 +116,7 @@ def insert_verb(database_file, derivative_forms_to_study, root_word,
                                               'мин.несв.вр., 1л., ед.ч.'],
                                           singular2=
                                           derivative_forms_to_study_with_defaults[
-                                              'мин.несв.вр., 1л., мн.ч.'],
+                                              'мин.несв.вр., 2л., ед.ч.'],
                                           plural3=None)
 
         # Imperative

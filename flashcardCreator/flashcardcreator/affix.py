@@ -132,6 +132,8 @@ def filter_verb_participles(derivative_forms_to_study):
     :param derivative_forms_to_study: Required. Dictionary with the derivative forms
     :return: Verb participles
     """
+    if derivative_forms_to_study.items():
+        return {}
     return {participle: derivative_form for participle, derivative_form in
-            derivative_forms_to_study
+            derivative_forms_to_study.items()
             if participle in VERB_PARTICIPLES_WHICH_MIGHT_BE_IRREGULAR}

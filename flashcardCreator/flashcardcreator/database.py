@@ -85,11 +85,8 @@ def insert_other_word_type_with_cursor(db_cursor, word_fields):
         ''', word_fields)
 
 
-def insert_participles_with_cursor(db_cursor, derivative_forms_to_study,
+def insert_participles_with_cursor(db_cursor, verb_participles,
                                    final_translation, word_id):
-    if not derivative_forms_to_study:
-        return
-    verb_participles = filter_verb_participles(derivative_forms_to_study)
     for participle_name, derivative_form in verb_participles:
         word_fields = {
             'word': derivative_form,
@@ -97,7 +94,7 @@ def insert_participles_with_cursor(db_cursor, derivative_forms_to_study,
             'type': participle_name,
             'externalWordId': word_id
         }
-    insert_other_word_type_with_cursor(db_cursor, word_fields)
+        insert_other_word_type_with_cursor(db_cursor, word_fields)
 
 
 def insert_verb_tense_with_cursor(db_cursor, present_singular1, tense,

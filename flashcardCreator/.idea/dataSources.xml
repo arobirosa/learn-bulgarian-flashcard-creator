@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="flashcards sqlite" uuid="d0536f77-511b-47bc-9980-8367314782c9">
+    <data-source source="LOCAL" name="flashcards sqlite" read-only="true" uuid="d0536f77-511b-47bc-9980-8367314782c9">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/flashcards.sqlite</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
+      <auto-close enable="true" />
     </data-source>
     <data-source source="LOCAL" name="grammatical_dictionary" uuid="9b82170d-d065-4ffb-8772-cf8a1ac90410">
       <driver-ref>sqlite.xerial</driver-ref>

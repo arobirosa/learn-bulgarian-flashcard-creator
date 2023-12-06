@@ -523,6 +523,8 @@ class WordFinder:
         :rtype: None or a AbstractClassifiedWord
         """
         word = WordFinder._find_word(word_to_search)
+        if word is None and word_to_search.endswith(' се'):
+            word = WordFinder._find_word(word_to_search[:-3])
         if word is None or word.exists_flashcard_for_this_word():
             return None
         if not word.ask_user_for_final_translation():

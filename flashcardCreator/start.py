@@ -22,7 +22,8 @@
 import argparse
 
 import logging.config
-
+import tkinter as tk
+from tkinter import simpledialog, messagebox
 
 from flashcardcreator.main import set_flashcard_database, \
     load_logging_configuration, WordFinder
@@ -38,8 +39,17 @@ parser.add_argument('-v', '--verbose', action='store_true',
                     help='Shows what the flash generator is doing')
 parser.add_argument('-vv', '--debug', action='store_true',
                     help='Shows debug information')
-parser.add_argument('word_to_import',
-                    help='Word which you want to study')
+
+group_word_source = parser.add_argument_group('Word source',
+                                              'Where does the word(s) come from?')
+exclusive_group_word_source = group_word_source.add_mutually_exclusive_group(
+    required=True)
+exclusive_group_word_source.add_argument('-a', '--ask-word-continuously',
+                                         action='store_true', required=False,
+                                         help='Ask the user to enter one or more words')
+exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
+                                         metavar='WORD',
+                                         help='One word as parameter in the command line')
 
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
@@ -48,9 +58,40 @@ set_flashcard_database(global_arguments.flashcard_database)
 load_logging_configuration(debug=global_arguments.debug,
                            verbose=global_arguments.verbose)
 
-found_word = WordFinder.find_word_with_english_translation(
-    global_arguments.word_to_import)
-if found_word is None:
-    exit(1)
 
-found_word.create_flashcard()
+def find_word_and_create_flashcards(word_to_import):
+    """
+    Finds and creates the flashcards for the given word
+    :param word_to_import:
+    :return: None if the word wasn't found. True if the flash card was created. False if the creation was aborted.
+    """
+    found_word = WordFinder.find_word_with_english_translation(word_to_import)
+    if found_word is None:
+        return None
+    if not found_word.create_flashcard():
+        return False
+    found_word.create_flashcards_for_linked_words()
+    return True
+
+
+def show_word_not_found_dialog(word):
+    message = f"The word {word} cannot be found or has already flashcards"
+    messagebox.showinfo("Error", message)
+
+
+if global_arguments.word_to_import:
+    find_word_and_create_flashcards(global_arguments.word_to_import)
+elif global_arguments.ask_word_continuously:
+    while True:
+        root = tk.Tk()
+        root.withdraw()  # Hide the main window
+        word_to_import = simpledialog.askstring("Flash card creator",
+                                                'Please write the word to import')
+        if not word_to_import:
+            logger.info("The user wants to exit")
+            break
+        logger.debug(f'The user entered the word {word_to_import}')
+        creation_result = find_word_and_create_flashcards(word_to_import)
+        if creation_result is None:
+            show_word_not_found_dialog(word_to_import)
+    logger.info("Exiting")

@@ -225,7 +225,7 @@ select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.
 from (select wt.speech_part, wt.id, min(w.id) word_id_max
       from word_type wt
                join word w on wt.id = w.type_id
-      where speech_part = 'verb_intransitive_terminative'
+      where speech_part in ('verb_intransitive_terminative', 'verb_transitive_imperfective')
       group by wt.speech_part, wt.id) word_from_word_type
 join word w2
     on word_from_word_type.word_id_max = w2.id
@@ -246,7 +246,7 @@ select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.
 from (select wt.speech_part, wt.id, min(w.id) word_id_max
       from word_type wt
                join word w on wt.id = w.type_id
-      where speech_part = 'verb_intransitive_terminative'
+      where speech_part in ('verb_intransitive_terminative', 'verb_transitive_imperfective')
       group by wt.speech_part, wt.id) word_from_word_type
          join word w2
               on word_from_word_type.word_id_max = w2.id

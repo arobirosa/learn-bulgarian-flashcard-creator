@@ -136,17 +136,18 @@ class OnlineDictionary:
         translations = self.get_translations_from(word_or_phrase)
         if translations is None:
             return None
-        simple_translations = set([translation['target'] for
-                                   translation in translations if
-                                   ' ' not in translation['target']])
+        simple_translations = sorted(set([translation['target'] for
+                                          translation in translations if
+                                          ' ' not in translation['target']]))
         logger.debug(
             f"Simple translations found for '{word_or_phrase}': {simple_translations}")
         if simple_translations:
-            return
-        translations_with_many_words = set([translation['target'] for
-                                            translation in translations if
-                                            'headword' in translation[
-                                                'source']])
+            return simple_translations
+        translations_with_many_words = sorted(set([translation['target'] for
+                                                   translation in translations
+                                                   if
+                                                   'headword' in translation[
+                                                       'source']]))
         logger.debug(
             f"Translations with many words found for '{word_or_phrase}': {translations_with_many_words}")
         return translations_with_many_words

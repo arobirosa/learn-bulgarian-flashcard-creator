@@ -265,3 +265,41 @@ from (select wt.speech_part, wt.id, min(w.id) word_id_max
 where df.name || 'л' <> df3.name
    or df.name || 'ли' <> df4.name
 order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name "ед.ч. пълен член",
+       df3.name "мн.ч.", df4.name "мн.ч. членувано",
+       df5.name "мин.деят.несв.прич. м.р."
+from (select wt.speech_part, wt.id, min(w.id) word_id_max
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'noun_male'
+      group by wt.speech_part, wt.id) word_from_word_type
+         join word w2
+              on word_from_word_type.word_id_max = w2.id
+         join derivative_form df
+              on w2.id = df.base_word_id
+                  and df.description = 'ед.ч. пълен член'
+         join derivative_form df3
+              on w2.id = df3.base_word_id
+                  and df3.description = 'мн.ч.'
+         join derivative_form df4
+              on w2.id = df4.base_word_id
+                  and df4.description = 'мн.ч. членувано'
+         join derivative_form df5
+              on w2.id = df5.base_word_id
+                  and df5.description = 'бройна форма'
+where /*w2.name || 'ът' <> df.name
+   or w2.name || 'и' <> df3.name
+   or df3.name || 'те' <> df4.name
+    or */ w2.name || 'а' <> df5.name
+order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+select distinct df.description
+    from derivative_form df
+    join word w
+        on w.id = df.base_word_id
+    join word_type wt
+        on wt.id = w.type_id
+        and wt.speech_part in ('noun_male');

@@ -417,7 +417,7 @@ class Verb(AbstractClassifiedWord):
         :return: True if is of typ "свършен вид"
         """
         match self._speech_part:
-            case 'verb_intransitive_imperfective' | 'verb_transitive_imperfective':
+            case 'verb_intransitive_imperfective' | 'verb_transitive_imperfective' | 'verb':
                 return False
             case 'verb_intransitive_terminative' | 'verb_transitive_terminative':
                 return True
@@ -556,9 +556,13 @@ class WordFinder:
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)
-            case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative':
+            case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative' | 'verb':
                 return Verb(word_id, root_word, word_meaning,
                             word_type_id, speech_part)
+            case 'pronominal_possessive' | 'pronominal_personal':
+                logger.warning(
+                    f'The word {root_word} has already flashcards and won''t be imported')
+                return None
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

@@ -409,13 +409,6 @@ order by word_from_word_type.speech_part, word_from_word_type.id ;
 
 
 
-
-
-
-
-
-
-
 select distinct df.description
     from derivative_form df
     join word w
@@ -423,3 +416,17 @@ select distinct df.description
     join word_type wt
         on wt.id = w.type_id
         and wt.speech_part in ('adjective');
+
+/* Other other words */
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name, df.description
+from (select wt.speech_part, wt.id, min(w.id) word_id_example
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'verb'
+      group by wt.speech_part, wt.id) word_from_word_type
+      join word w2
+            on word_from_word_type.word_id_example = w2.id
+      left join derivative_form df
+                   on w2.id = df.base_word_id
+order by word_from_word_type.speech_part, word_from_word_type.id, w2.name, df.name, df.description ;

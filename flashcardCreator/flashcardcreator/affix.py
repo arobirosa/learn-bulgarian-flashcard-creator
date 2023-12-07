@@ -31,6 +31,7 @@ DERIVATIVE_FORMS_DESCRIPTIONS_TO_ENGLISH_NAMES = {
     'звателна форма': 'vocative_form',
     'бройна форма': 'contable',
     'м.р.': 'masculineForm',
+    'м.р. пълен член': 'masculine_definite',
     'ж.р.': 'femenineForm',
     'ср.р.': 'neutralForm',
     'мн.ч.': 'pluralForm'

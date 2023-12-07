@@ -387,6 +387,10 @@ class Adjective(AbstractClassifiedWord):
             adjective_fields['pluralForm'] = \
                 derivative_forms_to_study[
                     'pluralForm']
+        if 'masculine_definite' in derivative_forms_to_study:
+            adjective_fields['masculine_definite'] = \
+                derivative_forms_to_study[
+                    'masculine_definite']
         insert_adjective(flashcard_database, adjective_fields)
         return True
 

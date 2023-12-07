@@ -28,6 +28,7 @@ DERIVATIVE_FORMS_DESCRIPTIONS_TO_ENGLISH_NAMES = {
     'ед.ч. членувано': 'singular_definite',
     'мн.ч.': 'plural_indefinite',
     'мн.ч. членувано': 'plural_definite',
+    'звателна форма': 'vocative_form',
     'бройна форма': 'contable',
     'м.р.': 'masculineForm',
     'ж.р.': 'femenineForm',

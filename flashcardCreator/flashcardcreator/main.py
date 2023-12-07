@@ -549,7 +549,7 @@ class WordFinder:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_meaning, word_type_id,
                             speech_part)
-            case 'adjective':
+            case 'adjective' | 'pronominal_general':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
             case 'adverb':
@@ -559,7 +559,7 @@ class WordFinder:
             case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative' | 'verb':
                 return Verb(word_id, root_word, word_meaning,
                             word_type_id, speech_part)
-            case 'pronominal_possessive' | 'pronominal_personal':
+            case 'pronominal_possessive' | 'pronominal_personal' | 'pronominal_interrogative':
                 logger.warning(
                     f'The word {root_word} has already flashcards and won''t be imported')
                 return None

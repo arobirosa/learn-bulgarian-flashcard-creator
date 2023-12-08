@@ -606,7 +606,9 @@ class WordFinder:
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
             case 'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \
-                 | 'name_various' | 'name_bg-various' | 'name_bg-place':
+                 | 'name_various' | 'name_bg-various' | 'name_bg-place' | 'abbreviation' \
+                 | 'conjunction' | 'interjection' | 'other' | 'particle' | 'prefix' | 'suffix' \
+                 | 'preposition' | 'phrase' | 'noun_plurale-tantum':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)

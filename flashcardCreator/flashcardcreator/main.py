@@ -605,7 +605,8 @@ class WordFinder:
             case 'adjective' | 'pronominal_general':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
-            case 'adverb' | 'name_capital':
+            case 'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \
+                 | 'name_various' | 'name_bg-various' | 'name_bg-place':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)

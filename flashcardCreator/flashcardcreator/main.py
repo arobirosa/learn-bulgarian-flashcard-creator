@@ -619,7 +619,9 @@ class WordFinder:
                 logger.warning(
                     f'The word {root_word} has already flashcards and won''t be imported')
                 return None
-            case 'name_people_family', 'name_people_name':
+            case 'name_people_family' | 'name_people_name' | 'numeral_cardinal' | \
+                 'pronominal_demonstrative' | 'pronominal_relative' | \
+                 'pronominal_negative' | 'pronominal_indefinite':
                 logger.warning(
                     f'The word {root_word} is a {speech_part} and won''t be imported')
                 return None

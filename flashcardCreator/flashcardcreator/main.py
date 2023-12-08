@@ -602,7 +602,7 @@ class WordFinder:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_meaning, word_type_id,
                             speech_part)
-            case 'adjective' | 'pronominal_general':
+            case 'adjective' | 'pronominal_general' | 'numeral_ordinal':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
             case 'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \

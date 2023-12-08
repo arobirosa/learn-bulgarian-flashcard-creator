@@ -423,10 +423,31 @@ select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.
 from (select wt.speech_part, wt.id, min(w.id) word_id_example
       from word_type wt
                join word w on wt.id = w.type_id
-      where speech_part = 'name_people_family'
+      where speech_part = 'name_month'
       group by wt.speech_part, wt.id) word_from_word_type
       join word w2
             on word_from_word_type.word_id_example = w2.id
       left join derivative_form df
                    on w2.id = df.base_word_id
 order by word_from_word_type.speech_part, word_from_word_type.id, w2.name, df.name, df.description ;
+
+select word.*, df.*
+from word
+    left join derivative_form df on word.id = df.base_word_id
+where word.name = 'Цанко'
+
+
+SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
+FROM derivative_form as df
+         join word as w
+              on w.id = df.base_word_id
+         join word_type as wt
+              on w.type_id = wt.id
+where lower(df.name) = :word_to_search
+UNION
+SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
+FROM word as w
+         join word_type as wt
+              on w.type_id = wt.id
+WHERE lower(w.name) = :word_to_search
+  AND NOT EXISTS (SELECT 1 FROM derivative_form as df WHERE df.base_word_id = w.id);

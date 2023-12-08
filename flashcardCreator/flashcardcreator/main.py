@@ -19,11 +19,11 @@
 import configparser
 # Contains the main classes
 import logging
+import re
 import sqlite3
 import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
-import re
 
 import yaml
 
@@ -40,6 +40,39 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
+
+CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS = [
+    ('а', 'А'),
+    ('б', 'Б'),
+    ('в', 'В'),
+    ('г', 'Г'),
+    ('д', 'Д'),
+    ('е', 'Е'),
+    ('ж', 'Ж'),
+    ('з', 'З'),
+    ('и', 'И'),
+    ('й', 'Й'),
+    ('к', 'К'),
+    ('л', 'Л'),
+    ('м', 'М'),
+    ('н', 'Н'),
+    ('о', 'О'),
+    ('п', 'П'),
+    ('р', 'Р'),
+    ('с', 'С'),
+    ('т', 'Т'),
+    ('у', 'У'),
+    ('ф', 'Ф'),
+    ('х', 'Х'),
+    ('ц', 'Ц'),
+    ('ч', 'Ч'),
+    ('ш', 'Ш'),
+    ('щ', 'Щ'),
+    ('ъ', 'Ъ'),
+    ('ь', 'Ь'),
+    ('ю', 'Ю'),
+    ('я', 'Я')
+]
 
 logger = logging.getLogger(__name__)
 # Location of the flashcard which can be given by the user
@@ -447,6 +480,22 @@ class WordWithoutDerivativeForms(AbstractClassifiedWord):
         return {}
 
 
+def first_cyrillic_letter_upper_case(word_without_accents):
+    """
+    Converts the first Cyrillic letter to upper case.
+    When the user enters a name of a person, city, capital or country, the first letter must be in
+    upper case and SQLite's lower() function don't support cyrillic characters.
+
+    :param word_without_accents: Word without any accents
+    :return: The word with the first character in upper case.
+    """
+    first_char = word_without_accents[0:1]
+    for lowercase, uppercase in CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS:
+        if lowercase == first_char:
+            return uppercase + word_without_accents[1:]
+    return word_without_accents
+
+
 class WordFinder:
 
     @staticmethod
@@ -479,9 +528,13 @@ class WordFinder:
         :rtype: None or a AbstractClassifiedWord
         """
         # Find what type of word is it together with its writing rules
+        word_without_accents = WordFinder._trim_lower_case_remove_accents(
+            word_to_search)
+        word_like_a_name = first_cyrillic_letter_upper_case(
+            word_without_accents)
         search_params = {
-            'word_to_search': WordFinder._trim_lower_case_remove_accents(
-                word_to_search)}
+            'word_to_search': word_without_accents,
+            'word_to_search_like_name': word_like_a_name}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
                 SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
@@ -490,13 +543,13 @@ class WordFinder:
                     on w.id = df.base_word_id
                     join word_type as wt
                     on w.type_id = wt.id
-                where df.name = :word_to_search
+                where df.name in (:word_to_search, :word_to_search_like_name)
             UNION 
                 SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
                 FROM word as w
                     join word_type as wt
                     on w.type_id = wt.id
-                WHERE w.name = :word_to_search
+                WHERE w.name in (:word_to_search, :word_to_search_like_name)
                 AND NOT EXISTS (SELECT 1 FROM derivative_form as df WHERE df.base_word_id = w.id);
         ''', search_params)
 
@@ -552,7 +605,7 @@ class WordFinder:
             case 'adjective' | 'pronominal_general':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
-            case 'adverb':
+            case 'adverb' | 'name_capital':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)

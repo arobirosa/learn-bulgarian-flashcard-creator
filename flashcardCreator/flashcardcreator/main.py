@@ -270,7 +270,8 @@ class AbstractClassifiedWord(ABC):
         :return: None
         """
         linked_words = self._get_linked_words()
-        new_words = [WordFinder.find_word_with_english_translation(word) for
+        new_words = [WordFinder.find_word_with_english_translation(word, None)
+                     for
                      word in linked_words]
         # Remove all Nones from existing words
         new_words_to_import = [classifiedWord for classifiedWord in new_words
@@ -519,11 +520,12 @@ class WordFinder:
 
 
     @staticmethod
-    def _find_word(word_to_search: str):
+    def _find_word(word_to_search: str, other_word_type):
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
+        :param other_word_type: Type of the word if it isn't found in the grammar dictionary
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
@@ -554,9 +556,13 @@ class WordFinder:
         ''', search_params)
 
         if not found_classified_words:
-            logger.warning(
-                f'The word {word_to_search} is unknown. Exiting')
-            return None
+            if other_word_type is not None:
+                return WordFinder._create_classified_word_subclass(
+                    None, word_to_search, None, other_word_type, None)
+            else:
+                logger.warning(
+                    f'The word {word_to_search} is unknown. Exiting')
+                return None
         elif len(found_classified_words) > 1:
             found_classified_word = flashcardcreator.userinput.ask_user_to_choose_a_row(
                 found_classified_words)
@@ -566,20 +572,24 @@ class WordFinder:
         else:
             found_classified_word = found_classified_words[0]
 
+        word_id, root_word, word_type_id, speech_part, word_meaning = found_classified_word
         return WordFinder._create_classified_word_subclass(
-            found_classified_word)
+            word_id, root_word, word_type_id, speech_part, word_meaning)
 
 
     @staticmethod
-    def find_word_with_english_translation(word_to_search: str):
+    def find_word_with_english_translation(word_to_search: str,
+                                           other_word_type):
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
+        :param word_to_search: Word to search for. It will be converted to the case required by the grammar dictionary
+        :param other_word_type: Type of the word if it isn't found in the grammar dictionary
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
-        word = WordFinder._find_word(word_to_search)
+        word = WordFinder._find_word(word_to_search, other_word_type)
         if word is None and word_to_search.endswith(' се'):
             word = WordFinder._find_word(word_to_search[:-3])
         if word is None or word.exists_flashcard_for_this_word():
@@ -590,14 +600,14 @@ class WordFinder:
 
 
     @staticmethod
-    def _create_classified_word_subclass(found_classified_word):
+    def _create_classified_word_subclass(word_id, root_word, word_type_id,
+                                         speech_part, word_meaning):
         """"
         Factory method which creates an instance of the subclasses of ClassifiedWord based on the given fields.
         :rtype A subclass of ClassifiedWord
         """
         logger.debug(
-            f'The word {found_classified_word[1]} is classified as {found_classified_word}')
-        word_id, root_word, word_type_id, speech_part, word_meaning = found_classified_word
+            f'The word {root_word} with {word_id} is classified as {speech_part}')
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_meaning, word_type_id,
@@ -605,10 +615,12 @@ class WordFinder:
             case 'adjective' | 'pronominal_general' | 'numeral_ordinal':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
-            case 'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \
-                 | 'name_various' | 'name_bg-various' | 'name_bg-place' | 'abbreviation' \
-                 | 'conjunction' | 'interjection' | 'other' | 'particle' | 'prefix' | 'suffix' \
-                 | 'preposition' | 'phrase' | 'noun_plurale-tantum':
+            case \
+                'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \
+                | 'name_various' | 'name_bg-various' | 'name_bg-place' | 'abbreviation' \
+                | 'conjunction' | 'interjection' | 'other' | 'particle' | 'prefix' | 'suffix' \
+                | 'preposition' | 'phrase' | 'noun_plurale-tantum' \
+                | 'expression' | 'geographical' | 'idiom' | 'math' | 'numeral' | 'plural':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)

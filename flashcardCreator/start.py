@@ -50,22 +50,45 @@ exclusive_group_word_source.add_argument('-a', '--ask-word-continuously',
 exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
                                          metavar='WORD',
                                          help='One word as parameter in the command line')
+parser.add_argument('-t', '--other-word-type',
+                    choices=['abreviation', 'adverb',
+                             'conjuntion', 'expression',
+                             'geographical', 'idiom',
+                             'interjection', 'math',
+                             'name_bg-place',
+                             'name_bg-various',
+                             'name_capital', 'name_city',
+                             'name_country',
+                             'name_popular',
+                             'name_various',
+                             'noun_plurale-tantum',
+                             'numeral', 'particle',
+                             'phrase', 'plural', 'prefix',
+                             'preposition',
+                             'suffix'],
+                    help='If the word cannot be found in the grammar dictionary, imports it with this word type')
 
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
+if global_arguments.ask_word_continuously and not global_arguments.other_word_type:
+    logger.warning(
+        "The parameter --other-word-type can only be used when only word is imported")
+    exit(3)
 
 set_flashcard_database(global_arguments.flashcard_database)
 load_logging_configuration(debug=global_arguments.debug,
                            verbose=global_arguments.verbose)
 
 
-def find_word_and_create_flashcards(word_to_import):
+def find_word_and_create_flashcards(word_to_import, other_word_type):
     """
     Finds and creates the flashcards for the given word
-    :param word_to_import:
+    :param other_word_type: Type of the word if it isn't found in the grammar dictionary
+    :param word_to_import: Flashcards will be created for this word
     :return: None if the word wasn't found. True if the flash card was created. False if the creation was aborted.
     """
-    found_word = WordFinder.find_word_with_english_translation(word_to_import)
+    found_word = WordFinder.find_word_with_english_translation(word_to_import,
+                                                               other_word_type)
     if found_word is None:
         return None
     if not found_word.create_flashcard():
@@ -80,7 +103,8 @@ def show_word_not_found_dialog(word):
 
 
 if global_arguments.word_to_import:
-    find_word_and_create_flashcards(global_arguments.word_to_import)
+    find_word_and_create_flashcards(global_arguments.word_to_import,
+                                    global_arguments.other_word_type)
 elif global_arguments.ask_word_continuously:
     while True:
         root = tk.Tk()
@@ -91,7 +115,7 @@ elif global_arguments.ask_word_continuously:
             logger.info("The user wants to exit")
             break
         logger.debug(f'The user entered the word {word_to_import}')
-        creation_result = find_word_and_create_flashcards(word_to_import)
+        creation_result = find_word_and_create_flashcards(word_to_import, None)
         if creation_result is None:
             show_word_not_found_dialog(word_to_import)
     logger.info("Exiting")

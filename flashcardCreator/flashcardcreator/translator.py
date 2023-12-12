@@ -80,10 +80,13 @@ def translate_text_to_english(word_or_phrase_to_translate,
         logging.getLogger('deepl').setLevel(logging.DEBUG)
     else:
         logging.getLogger('deepl').setLevel(logging.WARNING)
-    deep_translation = free_translator.translate_text(
+    deep_translation_result = free_translator.translate_text(
         word_or_phrase_to_translate,
         source_lang='BG',
         target_lang='EN-GB')
-    if not deep_translation:
-        online_dictionary_translations.append(deep_translation)
+    if isinstance(deep_translation_result, deepl.TextResult):
+        online_dictionary_translations.append(deep_translation_result.text)
+    elif isinstance(deep_translation_result, list):
+        online_dictionary_translations += [result.text for result in
+                                           deep_translation_result]
     return ", ".join(online_dictionary_translations)

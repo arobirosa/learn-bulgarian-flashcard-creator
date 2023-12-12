@@ -20,7 +20,8 @@
 import os
 import logging
 
-OTHER_WORD_TYPES = ['expression', 'abreviation', 'adjective', 'adverb',
+EXPRESSION_WORD_TYPE = 'expression'
+OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abreviation', 'adjective', 'adverb',
                     'conjuntion',
                     'geographical', 'idiom',
                     'interjection', 'math',

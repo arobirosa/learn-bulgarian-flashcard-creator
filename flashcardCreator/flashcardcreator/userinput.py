@@ -19,7 +19,7 @@
 import logging
 import tkinter as tk
 from tkinter import simpledialog, ttk
-from flashcardcreator.util import OTHER_WORD_TYPES
+import flashcardcreator.util
 
 # Collection of methods which ask the user for input like the translation of a word and
 # what irregular declinations to import from a word
@@ -62,7 +62,9 @@ class EnterWordAndTypeDialog(tk.simpledialog.Dialog):
         tk.Label(master,
                  text="If the word is unknown, use this word type:").grid(
             row=1, column=0)
-        all_word_types = OTHER_WORD_TYPES[:]
+        all_word_types = flashcardcreator.util.OTHER_WORD_TYPES[:]
+        all_word_types.remove(flashcardcreator.util.EXPRESSION_WORD_TYPE)
+        all_word_types.append(flashcardcreator.util.EXPRESSION_WORD_TYPE)
         all_word_types.append(_AUTOMATIC_WORD_TYPE)
         self.word_type_var = ttk.Combobox(master,
                                           values=all_word_types,

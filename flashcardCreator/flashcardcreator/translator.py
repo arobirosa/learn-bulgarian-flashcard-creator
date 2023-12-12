@@ -89,4 +89,4 @@ def translate_text_to_english(word_or_phrase_to_translate,
     elif isinstance(deep_translation_result, list):
         online_dictionary_translations += [result.text for result in
                                            deep_translation_result]
-    return ", ".join(online_dictionary_translations)
+    return ", ".join(set(online_dictionary_translations))

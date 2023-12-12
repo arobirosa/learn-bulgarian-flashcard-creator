@@ -18,11 +18,13 @@
 
 import logging
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, ttk
+from flashcardcreator.util import OTHER_WORD_TYPES
 
 # Collection of methods which ask the user for input like the translation of a word and
 # what irregular declinations to import from a word
 
+_AUTOMATIC_WORD_TYPE = 'automatic'
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +52,32 @@ class ListDialog(simpledialog.Dialog):
             self.result = None
 
 
+class EnterWordAndTypeDialog(tk.simpledialog.Dialog):
+    def body(self, master):
+        tk.Label(master, text="Please write the word to import:").grid(row=0,
+                                                                       column=0)
+        self.word_entry = tk.Entry(master)
+        self.word_entry.grid(row=0, column=1)
+
+        tk.Label(master,
+                 text="If the word is unknown, use this word type:").grid(
+            row=1, column=0)
+        all_word_types = OTHER_WORD_TYPES[:]
+        all_word_types.append(_AUTOMATIC_WORD_TYPE)
+        self.word_type_var = ttk.Combobox(master,
+                                          values=all_word_types,
+                                          state="readonly")
+        self.word_type_var.set(
+            _AUTOMATIC_WORD_TYPE)  # Set the default selection
+        self.word_type_var.grid(row=1, column=1)
+
+        return self.word_entry  # Focus on the word entry field initially
+
+
+    def apply(self):
+        self.result = (self.word_entry.get(), self.word_type_var.get())
+
+
 def ask_user_for_translation(word_original, translated_word_original):
     """Prompts the user to correct or complete the automatic translation of the original word
 
@@ -65,6 +93,7 @@ def ask_user_for_translation(word_original, translated_word_original):
                                                initialvalue=translated_word_original)
     logger.debug(
         f'The user entered the final translation {final_translation} for {word_original}')
+    root.destroy()
     return final_translation
 
 
@@ -78,4 +107,25 @@ def ask_user_to_choose_a_row(found_classified_words):
     dialog = ListDialog(root, "Choose Element", found_classified_words)
     selected_word = dialog.result
     logger.debug(f'The selected word is {selected_word}')
+    root.destroy()
     return selected_word
+
+
+def ask_user_for_a_word_and_a_type():
+    """
+    Ask the user to enter a word and enter a word type if it don't want to choose it automatically
+    The type can be None if the user selected "automatic'
+    :return: (word, type) or None.
+    """
+    root = tk.Tk()
+    root.withdraw()
+
+    enter_word_dialog = EnterWordAndTypeDialog(root, "Flash card creator")
+    result = enter_word_dialog.result
+    if result:
+        word_to_import, word_type = result
+        if word_type == _AUTOMATIC_WORD_TYPE:
+            word_type = None
+        logger.debug(f"Word entered {word_to_import} with type {word_type}")
+    root.destroy()
+    return result

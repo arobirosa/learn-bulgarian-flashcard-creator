@@ -22,11 +22,12 @@
 import argparse
 
 import logging.config
-import tkinter as tk
-from tkinter import simpledialog, messagebox
+from tkinter import messagebox
 
 from flashcardcreator.main import set_flashcard_database, \
     load_logging_configuration, WordFinder
+from flashcardcreator.userinput import ask_user_for_a_word_and_a_type
+from flashcardcreator.util import OTHER_WORD_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -51,21 +52,7 @@ exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
                                          metavar='WORD',
                                          help='One word as parameter in the command line')
 parser.add_argument('-t', '--other-word-type',
-                    choices=['abreviation', 'adjective', 'adverb',
-                             'conjuntion', 'expression',
-                             'geographical', 'idiom',
-                             'interjection', 'math',
-                             'name_bg-place',
-                             'name_bg-various',
-                             'name_capital', 'name_city',
-                             'name_country',
-                             'name_popular',
-                             'name_various',
-                             'noun_plurale-tantum',
-                             'numeral', 'particle',
-                             'phrase', 'plural', 'prefix',
-                             'preposition',
-                             'suffix'],
+                    choices=OTHER_WORD_TYPES,
                     help='If the word cannot be found in the grammar dictionary, imports it with this word type')
 
 global_arguments = parser.parse_args()
@@ -107,15 +94,14 @@ if global_arguments.word_to_import:
                                     global_arguments.other_word_type)
 elif global_arguments.ask_word_continuously:
     while True:
-        root = tk.Tk()
-        root.withdraw()  # Hide the main window
-        word_to_import = simpledialog.askstring("Flash card creator",
-                                                'Please write the word to import')
-        if not word_to_import:
+        result_tuple = ask_user_for_a_word_and_a_type()
+        if not result_tuple:
             logger.info("The user wants to exit")
             break
+        word_to_import, word_type = result_tuple
         logger.debug(f'The user entered the word {word_to_import}')
-        creation_result = find_word_and_create_flashcards(word_to_import, None)
+        creation_result = find_word_and_create_flashcards(word_to_import,
+                                                          word_type)
         if creation_result is None:
             show_word_not_found_dialog(word_to_import)
     logger.info("Exiting")

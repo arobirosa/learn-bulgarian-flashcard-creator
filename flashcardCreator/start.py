@@ -70,7 +70,7 @@ parser.add_argument('-t', '--other-word-type',
 
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
-if global_arguments.ask_word_continuously and not global_arguments.other_word_type:
+if global_arguments.ask_word_continuously and global_arguments.other_word_type is not None:
     logger.warning(
         "The parameter --other-word-type can only be used when only word is imported")
     exit(3)

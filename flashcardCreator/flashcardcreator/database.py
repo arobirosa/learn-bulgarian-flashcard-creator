@@ -57,8 +57,8 @@ def insert_adjective(database_file, adjective_fields):
     with sqlite3.connect(database_file) as db_connection:
         db_cursor = db_connection.cursor()
         db_cursor.execute('''
-        insert into adjetives (masculineForm, meaningInEnglish, femenineForm, neutralForm, pluralForm, externalWordId)
-        values (:masculineForm, :meaningInEnglish, :femenineForm, :neutralForm, :pluralForm, :externalWordId);
+        insert into adjetives (masculineForm, meaningInEnglish, femenineForm, neutralForm, pluralForm, masculineFormDefinitive, externalWordId)
+        values (:masculineForm, :meaningInEnglish, :femenineForm, :neutralForm, :pluralForm, :masculine_definite, :externalWordId);
         ''', adjective_fields)
         db_connection.commit()
         logger.info(

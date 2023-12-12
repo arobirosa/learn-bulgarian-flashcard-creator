@@ -265,3 +265,189 @@ from (select wt.speech_part, wt.id, min(w.id) word_id_max
 where df.name || 'л' <> df3.name
    or df.name || 'ли' <> df4.name
 order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name "ед.ч. пълен член",
+       df3.name "мн.ч.", df4.name "мн.ч. членувано",
+       df5.name "бройна форма"
+from (select wt.speech_part, wt.id, min(w.id) word_id_max
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'noun_male'
+      group by wt.speech_part, wt.id) word_from_word_type
+         join word w2
+              on word_from_word_type.word_id_max = w2.id
+         join derivative_form df
+              on w2.id = df.base_word_id
+                  and df.description = 'ед.ч. пълен член'
+         join derivative_form df3
+              on w2.id = df3.base_word_id
+                  and df3.description = 'мн.ч.'
+         join derivative_form df4
+              on w2.id = df4.base_word_id
+                  and df4.description = 'мн.ч. членувано'
+         join derivative_form df5
+              on w2.id = df5.base_word_id
+                  and df5.description = 'бройна форма'
+where /*w2.name || 'ът' <> df.name
+   or w2.name || 'и' <> df3.name
+   or df3.name || 'те' <> df4.name
+    or */ w2.name || 'а' <> df5.name
+order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name "ед.ч. членувано",
+       df3.name "мн.ч.", df4.name "мн.ч. членувано",
+       df5.name "звателна форма"
+from (select wt.speech_part, wt.id, min(w.id) word_id_max
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'noun_female'
+      group by wt.speech_part, wt.id) word_from_word_type
+         join word w2
+              on word_from_word_type.word_id_max = w2.id
+         left join derivative_form df
+              on w2.id = df.base_word_id
+                  and df.description = 'ед.ч. членувано'
+         left join derivative_form df3
+              on w2.id = df3.base_word_id
+                  and df3.description = 'мн.ч.'
+         left join derivative_form df4
+              on w2.id = df4.base_word_id
+                  and df4.description = 'мн.ч. членувано'
+         left join derivative_form df5
+              on w2.id = df5.base_word_id
+                  and df5.description = 'звателна форма'
+/*where /*w2.name || 'та' <> df.name
+   or substr(w2.name,0, length(w2.name)) || 'и' <> df3.name
+   and w2.name || 'и' <> df3.name
+   or  df3.name || 'те' <> df4.name
+     or  w2.name || 'а' <> df5.name*/
+order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name "ед.ч. членувано",
+       df3.name "мн.ч.", df4.name "мн.ч. членувано"
+from (select wt.speech_part, wt.id, min(w.id) word_id_max
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'noun_neutral'
+      group by wt.speech_part, wt.id) word_from_word_type
+         join word w2
+              on word_from_word_type.word_id_max = w2.id
+         left join derivative_form df
+                   on w2.id = df.base_word_id
+                       and df.description = 'ед.ч. членувано'
+         left join derivative_form df3
+                   on w2.id = df3.base_word_id
+                       and df3.description = 'мн.ч.'
+         left join derivative_form df4
+                   on w2.id = df4.base_word_id
+                       and df4.description = 'мн.ч. членувано'
+where /*w2.name || 'то' <> df.name
+   or (substr(w2.name,0, length(w2.name)) || 'а' <> df3.name
+           and substr(w2.name,0, length(w2.name)) || 'е' <> df3.name)
+   or  */ (df3.name || 'те' <> df4.name
+        and df3.name || 'та' <> df4.name)
+order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name "м.р. непълен член", df2.name "м.р. пълен член",
+       df3.name "мн.ч.", df4.name "мн.ч. членувано",
+       df5.name "ж.р.", df6.name "ж.р. членувано",
+       df7.name "ср.р.", df8.name "ср.р. членувано"
+from (select wt.speech_part, wt.id, min(w.id) word_id_max
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'adjective'
+      group by wt.speech_part, wt.id) word_from_word_type
+         join word w2
+              on word_from_word_type.word_id_max = w2.id
+         left join derivative_form df
+                   on w2.id = df.base_word_id
+                       and df.description = 'м.р. непълен член'
+         left join derivative_form df2
+                   on w2.id = df2.base_word_id
+                       and df2.description = 'м.р. пълен член'
+         left join derivative_form df3
+                   on w2.id = df3.base_word_id
+                       and df3.description = 'мн.ч.'
+         left join derivative_form df4
+                   on w2.id = df4.base_word_id
+                       and df4.description = 'мн.ч. членувано'
+         left join derivative_form df5
+                   on w2.id = df5.base_word_id
+                       and df5.description = 'ж.р.'
+         left join derivative_form df6
+                   on w2.id = df6.base_word_id
+                       and df6.description = 'ж.р. членувано'
+         left join derivative_form df7
+                   on w2.id = df7.base_word_id
+                       and df7.description = 'ср.р.'
+         left join derivative_form df8
+                   on w2.id = df8.base_word_id
+                       and df8.description = 'ср.р. членувано'
+/*where /*df.name <> df3.name || 'я'
+    or df3.name <> w2.name || 'и' and df3.name <> w2.name and w2.name not like '%ен'
+    or df4.name <> df3.name || 'те'
+        or
+        df5.name <> substr(w2.name,0, length(w2.name)) || 'а'
+            and df5.name <> w2.name || 'а'
+            and df5.name <> w2.name and w2.name not like '%ен'
+   or df6.name <> df5.name || 'та'
+    or */
+        /*df7.name <> substr(df5.name,0, length(df5.name)) || 'о'
+        /*
+    or df8.name <> df7.name || 'то'
+   /*
+   or (substr(w2.name,0, length(w2.name)) || 'а' <> df3.name
+           and substr(w2.name,0, length(w2.name)) || 'е' <> df3.name)
+   or  (df3.name || 'те' <> df4.name
+    and df3.name || 'та' <> df4.name)*/
+order by word_from_word_type.speech_part, word_from_word_type.id ;
+
+
+
+select distinct df.description
+    from derivative_form df
+    join word w
+        on w.id = df.base_word_id
+    join word_type wt
+        on wt.id = w.type_id
+        and wt.speech_part in ('adjective');
+
+/* Other other words */
+select word_from_word_type.speech_part, word_from_word_type.id word_type_id, w2.name,
+       df.name, df.description
+from (select wt.speech_part, wt.id, min(w.id) word_id_example
+      from word_type wt
+               join word w on wt.id = w.type_id
+      where speech_part = 'numeral_ordinal'
+      group by wt.speech_part, wt.id) word_from_word_type
+      join word w2
+            on word_from_word_type.word_id_example = w2.id
+      left join derivative_form df
+                   on w2.id = df.base_word_id
+order by word_from_word_type.speech_part, word_from_word_type.id, w2.name, df.name, df.description ;
+
+select word.*, df.*
+from word
+    left join derivative_form df on word.id = df.base_word_id
+where word.name = 'Цанко'
+
+
+SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
+FROM derivative_form as df
+         join word as w
+              on w.id = df.base_word_id
+         join word_type as wt
+              on w.type_id = wt.id
+where lower(df.name) = :word_to_search
+UNION
+SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
+FROM word as w
+         join word_type as wt
+              on w.type_id = wt.id
+WHERE lower(w.name) = :word_to_search
+  AND NOT EXISTS (SELECT 1 FROM derivative_form as df WHERE df.base_word_id = w.id);

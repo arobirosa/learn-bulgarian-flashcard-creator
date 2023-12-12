@@ -19,11 +19,11 @@
 import configparser
 # Contains the main classes
 import logging
+import re
 import sqlite3
 import unicodedata
 from abc import ABC, abstractmethod
 from collections import defaultdict
-import re
 
 import yaml
 
@@ -40,6 +40,39 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
 from flashcardcreator.translator import translate_text_to_english
 
 CONFIG_FILENAME = 'configuration.ini'
+
+CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS = [
+    ('а', 'А'),
+    ('б', 'Б'),
+    ('в', 'В'),
+    ('г', 'Г'),
+    ('д', 'Д'),
+    ('е', 'Е'),
+    ('ж', 'Ж'),
+    ('з', 'З'),
+    ('и', 'И'),
+    ('й', 'Й'),
+    ('к', 'К'),
+    ('л', 'Л'),
+    ('м', 'М'),
+    ('н', 'Н'),
+    ('о', 'О'),
+    ('п', 'П'),
+    ('р', 'Р'),
+    ('с', 'С'),
+    ('т', 'Т'),
+    ('у', 'У'),
+    ('ф', 'Ф'),
+    ('х', 'Х'),
+    ('ц', 'Ц'),
+    ('ч', 'Ч'),
+    ('ш', 'Ш'),
+    ('щ', 'Щ'),
+    ('ъ', 'Ъ'),
+    ('ь', 'Ь'),
+    ('ю', 'Ю'),
+    ('я', 'Я')
+]
 
 logger = logging.getLogger(__name__)
 # Location of the flashcard which can be given by the user
@@ -237,7 +270,8 @@ class AbstractClassifiedWord(ABC):
         :return: None
         """
         linked_words = self._get_linked_words()
-        new_words = [WordFinder.find_word_with_english_translation(word) for
+        new_words = [WordFinder.find_word_with_english_translation(word, None)
+                     for
                      word in linked_words]
         # Remove all Nones from existing words
         new_words_to_import = [classifiedWord for classifiedWord in new_words
@@ -373,6 +407,7 @@ class Adjective(AbstractClassifiedWord):
             'femenineForm': None,
             'neutralForm': None,
             'pluralForm': None,
+            'masculine_definite': None,
             'externalWordId': self._word_id
         }
         if 'femenineForm' in derivative_forms_to_study:
@@ -387,6 +422,10 @@ class Adjective(AbstractClassifiedWord):
             adjective_fields['pluralForm'] = \
                 derivative_forms_to_study[
                     'pluralForm']
+        if 'masculine_definite' in derivative_forms_to_study:
+            adjective_fields['masculine_definite'] = \
+                derivative_forms_to_study[
+                    'masculine_definite']
         insert_adjective(flashcard_database, adjective_fields)
         return True
 
@@ -413,7 +452,7 @@ class Verb(AbstractClassifiedWord):
         :return: True if is of typ "свършен вид"
         """
         match self._speech_part:
-            case 'verb_intransitive_imperfective' | 'verb_transitive_imperfective':
+            case 'verb_intransitive_imperfective' | 'verb_transitive_imperfective' | 'verb':
                 return False
             case 'verb_intransitive_terminative' | 'verb_transitive_terminative':
                 return True
@@ -443,6 +482,22 @@ class WordWithoutDerivativeForms(AbstractClassifiedWord):
         return {}
 
 
+def first_cyrillic_letter_upper_case(word_without_accents):
+    """
+    Converts the first Cyrillic letter to upper case.
+    When the user enters a name of a person, city, capital or country, the first letter must be in
+    upper case and SQLite's lower() function don't support cyrillic characters.
+
+    :param word_without_accents: Word without any accents
+    :return: The word with the first character in upper case.
+    """
+    first_char = word_without_accents[0:1]
+    for lowercase, uppercase in CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS:
+        if lowercase == first_char:
+            return uppercase + word_without_accents[1:]
+    return word_without_accents
+
+
 class WordFinder:
 
     @staticmethod
@@ -466,18 +521,23 @@ class WordFinder:
 
 
     @staticmethod
-    def _find_word(word_to_search: str):
+    def _find_word(word_to_search: str, other_word_type):
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
+        :param other_word_type: Type of the word if it isn't found in the grammar dictionary
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
         # Find what type of word is it together with its writing rules
+        word_without_accents = WordFinder._trim_lower_case_remove_accents(
+            word_to_search)
+        word_like_a_name = first_cyrillic_letter_upper_case(
+            word_without_accents)
         search_params = {
-            'word_to_search': WordFinder._trim_lower_case_remove_accents(
-                word_to_search)}
+            'word_to_search': word_without_accents,
+            'word_to_search_like_name': word_like_a_name}
         found_classified_words = flashcardcreator.database.return_rows_of_sql_statement(
             GRAMMATICAL_DATABASE_LOCAL_FILENAME, '''
                 SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
@@ -486,20 +546,24 @@ class WordFinder:
                     on w.id = df.base_word_id
                     join word_type as wt
                     on w.type_id = wt.id
-                where df.name = :word_to_search
+                where df.name in (:word_to_search, :word_to_search_like_name)
             UNION 
                 SELECT DISTINCT w.id, w.name, w.type_id, wt.speech_part, w.meaning
                 FROM word as w
                     join word_type as wt
                     on w.type_id = wt.id
-                WHERE w.name = :word_to_search
+                WHERE w.name in (:word_to_search, :word_to_search_like_name)
                 AND NOT EXISTS (SELECT 1 FROM derivative_form as df WHERE df.base_word_id = w.id);
         ''', search_params)
 
         if not found_classified_words:
-            logger.warning(
-                f'The word {word_to_search} is unknown. Exiting')
-            return None
+            if other_word_type is not None:
+                return WordFinder._create_classified_word_subclass(
+                    None, word_to_search, None, other_word_type, None)
+            else:
+                logger.warning(
+                    f'The word {word_to_search} is unknown. Exiting')
+                return None
         elif len(found_classified_words) > 1:
             found_classified_word = flashcardcreator.userinput.ask_user_to_choose_a_row(
                 found_classified_words)
@@ -509,20 +573,24 @@ class WordFinder:
         else:
             found_classified_word = found_classified_words[0]
 
+        word_id, root_word, word_type_id, speech_part, word_meaning = found_classified_word
         return WordFinder._create_classified_word_subclass(
-            found_classified_word)
+            word_id, root_word, word_type_id, speech_part, word_meaning)
 
 
     @staticmethod
-    def find_word_with_english_translation(word_to_search: str):
+    def find_word_with_english_translation(word_to_search: str,
+                                           other_word_type):
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
+        :param word_to_search: Word to search for. It will be converted to the case required by the grammar dictionary
+        :param other_word_type: Type of the word if it isn't found in the grammar dictionary
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
-        word = WordFinder._find_word(word_to_search)
+        word = WordFinder._find_word(word_to_search, other_word_type)
         if word is None and word_to_search.endswith(' се'):
             word = WordFinder._find_word(word_to_search[:-3])
         if word is None or word.exists_flashcard_for_this_word():
@@ -533,28 +601,43 @@ class WordFinder:
 
 
     @staticmethod
-    def _create_classified_word_subclass(found_classified_word):
+    def _create_classified_word_subclass(word_id, root_word, word_type_id,
+                                         speech_part, word_meaning):
         """"
         Factory method which creates an instance of the subclasses of ClassifiedWord based on the given fields.
         :rtype A subclass of ClassifiedWord
         """
         logger.debug(
-            f'The word {found_classified_word[1]} is classified as {found_classified_word}')
-        word_id, root_word, word_type_id, speech_part, word_meaning = found_classified_word
+            f'The word {root_word} with {word_id} is classified as {speech_part}')
         match speech_part:
             case 'noun_female' | 'noun_male' | 'noun_neutral':
                 return Noun(word_id, root_word, word_meaning, word_type_id,
                             speech_part)
-            case 'adjective':
+            case 'adjective' | 'pronominal_general' | 'numeral_ordinal':
                 return Adjective(word_id, root_word, word_meaning,
                                  word_type_id, speech_part)
-            case 'adverb':
+            case \
+                'adverb' | 'name_capital' | 'name_country' | 'name_city' | 'name_popular' \
+                | 'name_various' | 'name_bg-various' | 'name_bg-place' | 'abbreviation' \
+                | 'conjunction' | 'interjection' | 'other' | 'particle' | 'prefix' | 'suffix' \
+                | 'preposition' | 'phrase' | 'noun_plurale-tantum' \
+                | 'expression' | 'geographical' | 'idiom' | 'math' | 'numeral' | 'plural':
                 return WordWithoutDerivativeForms(word_id, root_word,
                                                   word_meaning,
                                                   word_type_id, speech_part)
-            case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative':
+            case 'verb_intransitive_imperfective' | 'verb_intransitive_terminative' | 'verb_transitive_imperfective' | 'verb_transitive_terminative' | 'verb':
                 return Verb(word_id, root_word, word_meaning,
                             word_type_id, speech_part)
+            case 'pronominal_possessive' | 'pronominal_personal' | 'pronominal_interrogative':
+                logger.warning(
+                    f'The word {root_word} has already flashcards and won''t be imported')
+                return None
+            case 'name_people_family' | 'name_people_name' | 'numeral_cardinal' | \
+                 'pronominal_demonstrative' | 'pronominal_relative' | \
+                 'pronominal_negative' | 'pronominal_indefinite':
+                logger.warning(
+                    f'The word {root_word} is a {speech_part} and won''t be imported')
+                return None
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")

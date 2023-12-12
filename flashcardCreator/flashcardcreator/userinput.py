@@ -127,5 +127,6 @@ def ask_user_for_a_word_and_a_type():
         if word_type == _AUTOMATIC_WORD_TYPE:
             word_type = None
         logger.debug(f"Word entered {word_to_import} with type {word_type}")
-    root.destroy()
-    return result
+        root.destroy()
+        return word_to_import, word_type
+    return None

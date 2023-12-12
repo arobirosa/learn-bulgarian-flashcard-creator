@@ -51,7 +51,7 @@ exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
                                          metavar='WORD',
                                          help='One word as parameter in the command line')
 parser.add_argument('-t', '--other-word-type',
-                    choices=['abreviation', 'adverb',
+                    choices=['abreviation', 'adjective', 'adverb',
                              'conjuntion', 'expression',
                              'geographical', 'idiom',
                              'interjection', 'math',

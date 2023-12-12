@@ -407,6 +407,7 @@ class Adjective(AbstractClassifiedWord):
             'femenineForm': None,
             'neutralForm': None,
             'pluralForm': None,
+            'masculine_definite': None,
             'externalWordId': self._word_id
         }
         if 'femenineForm' in derivative_forms_to_study:

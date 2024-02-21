@@ -1,6 +1,6 @@
 # About the project
 
-This tool will help you learn Bulgarian more efficiently saving you time and effort.
+This tool will help you learn Bulgarian more efficiently saving you time and effort. It only generates flashcards for the irregular forms of the words.
 
 ## Goals and Motivation
 

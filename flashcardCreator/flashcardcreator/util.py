@@ -21,7 +21,7 @@ import os
 import logging
 
 EXPRESSION_WORD_TYPE = 'expression'
-OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abreviation', 'adjective', 'adverb',
+OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abreviation', 'adverb',
                     'conjuntion',
                     'geographical', 'idiom',
                     'interjection', 'math',

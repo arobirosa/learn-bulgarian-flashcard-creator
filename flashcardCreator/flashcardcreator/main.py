@@ -40,6 +40,8 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
 from flashcardcreator.translator import translate_text_to_english
 from flashcardcreator.util import OTHER_WORD_TYPES, EXPRESSION_WORD_TYPE
 
+ERROR_PREFIX = "# ERROR: "
+INFO_PREFIX = "# INFO: "
 CONFIG_FILENAME = 'configuration.ini'
 
 CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS = [
@@ -732,10 +734,15 @@ def import_words_from_text_file(input_file_path, output_file_path):
             open(output_file_path, 'a') as output_file:
         for line in file:
             current_parsed_line = parse_line(line)
-            if current_parsed_line.is_comment:
+            # Exclude old errors, warnings or info messages
+            if current_parsed_line.original_line.startswith(ERROR_PREFIX) or \
+                    current_parsed_line.original_line.startswith(INFO_PREFIX):
+                continue
+            elif current_parsed_line.is_comment:
                 output_file.write(f"{current_parsed_line.original_line}")
             elif current_parsed_line.error:
-                output_file.write(f"# ERROR: {current_parsed_line.error}\n")
+                output_file.write(
+                    f"{ERROR_PREFIX}{current_parsed_line.error}\n")
                 output_file.write(f"{current_parsed_line.original_line}")
             else:
                 # Add the word or phrase to the flashcard database
@@ -745,15 +752,15 @@ def import_words_from_text_file(input_file_path, output_file_path):
                     current_parsed_line.translation)
                 if found_word is None:
                     output_file.write(
-                        "# ERROR: The following word wasn't found\n")
+                        f"{ERROR_PREFIX}The following word wasn't found\n")
                     output_file.write(f"{current_parsed_line.original_line}")
                 elif found_word.exists_flashcard_for_this_word():
                     output_file.write(
-                        f"# INFO: The word {current_parsed_line.word_or_phrase} already has flashcards\n")
+                        f"{INFO_PREFIX}The word {current_parsed_line.word_or_phrase} already has flashcards\n")
                 else:
                     if not found_word.create_flashcard():
                         output_file.write(
-                            f"# ERROR: No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
+                            f"{ERROR_PREFIX}No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
                     else:
                         found_word.create_flashcards_for_linked_words()
                         logger.debug(

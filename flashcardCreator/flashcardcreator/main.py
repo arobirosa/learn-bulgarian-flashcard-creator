@@ -38,6 +38,7 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor, \
     verb_pair_not_exists, verb_pair_insert
 from flashcardcreator.translator import translate_text_to_english
+from flashcardcreator.util import OTHER_WORD_TYPES, EXPRESSION_WORD_TYPE
 
 CONFIG_FILENAME = 'configuration.ini'
 
@@ -580,13 +581,15 @@ class WordFinder:
 
     @staticmethod
     def find_word_with_english_translation(word_to_search: str,
-                                           other_word_type):
+                                           other_word_type,
+                                           user_translation: str = None) -> AbstractClassifiedWord:
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
         :param word_to_search: Word to search for. It will be converted to the case required by the grammar dictionary
         :param other_word_type: Type of the word if it isn't found in the grammar dictionary
+        :param user_translation: Optional. Translation given by the user
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
@@ -595,7 +598,10 @@ class WordFinder:
             word = WordFinder._find_word(word_to_search[:-3], other_word_type)
         if word is None or word.exists_flashcard_for_this_word():
             return None
-        if not word.ask_user_for_final_translation():
+
+        if user_translation:
+            word._final_translation = user_translation
+        elif not word.ask_user_for_final_translation():
             return None
         return word
 
@@ -641,6 +647,71 @@ class WordFinder:
             case _:
                 raise ValueError(
                     f"The speech part {speech_part} isn't supported.")
+
+
+class ParsedLine:
+    def __init__(self, original_line, word_or_phrase, translation=None,
+                 word_type=None,
+                 error=None, is_comment=False):
+        self.original_line = original_line
+        self.word_or_phrase = word_or_phrase
+        self.translation = translation
+        self._word_type = word_type
+        self.error = error
+        self.is_comment = is_comment
+
+
+    @property
+    def word_type(self):
+        return self._word_type
+
+
+    @word_type.setter
+    def word_type(self, value):
+        if value not in OTHER_WORD_TYPES:
+            self.error = f"Invalid word type. Must be one of {OTHER_WORD_TYPES}."
+        else:
+            self._word_type = value
+
+
+def parse_line(line: str) -> ParsedLine:
+    """
+    Parses a line from the input file and returns a ParsedLine instance with
+    the word or phrase and optionally an error message, translation and a word type.
+    :param line: Mandatory. The line to parse
+    :return: ParseLine instance. Never null
+    """
+    if line.trim().startswith('#') or line.trim() == '':
+        return ParsedLine(line, None, None, None, None, True)
+
+    translation = None
+    word_type = None
+    parts = line.split('=')
+    if len(parts) == 3:
+        word_or_phrase, translation, word_type = parts
+    elif len(parts) == 2:
+        word_or_phrase, translation = parts
+    elif len(parts) == 1:
+        word_or_phrase = parts[0]
+    else:
+        raise ValueError(f"Invalid line format in line: {line}")
+
+    # Validate the line
+    if re.search('[A-Za-z]', word_or_phrase):
+        error = f"The word or phrase '{word_or_phrase}' contains Latin characters"
+    elif word_type is None:
+        # Count the number of words in the phrase without the particle "се"
+        words = word_or_phrase.split(' ')
+        if len(words) > 1 and words[-1] == 'се':
+            words = words[:-1]
+        if len(words) > 1 and words[0] == 'се':
+            words = words[1:]
+        logger.debug(f"Found words in the line {words}")
+        if len(words) > 1:
+            word_type = EXPRESSION_WORD_TYPE
+
+    return ParsedLine(line, word_or_phrase.trim(), translation.trim(),
+                      word_type, error)
 
 
 def load_logging_configuration(debug=False, verbose=False):

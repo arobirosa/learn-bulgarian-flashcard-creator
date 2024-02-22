@@ -25,7 +25,7 @@ import logging.config
 from tkinter import messagebox
 
 from flashcardcreator.main import set_flashcard_database, \
-    load_logging_configuration, WordFinder
+    load_logging_configuration, WordFinder, parse_line
 from flashcardcreator.userinput import ask_user_for_a_word_and_a_type
 from flashcardcreator.util import OTHER_WORD_TYPES
 
@@ -51,6 +51,14 @@ exclusive_group_word_source.add_argument('-a', '--ask-word-continuously',
 exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
                                          metavar='WORD',
                                          help='One word as parameter in the command line')
+exclusive_group_word_source.add_argument('-i', '--input-file',
+                                         dest='input_file_path',
+                                         type=str,
+                                         help='A file with words to import. It must exist. Please check the file format in the documentation.')
+exclusive_group_word_source.add_argument('-o', '--output-file',
+                                         dest='output_file_path',
+                                         type=str,
+                                         help='A file where you want to store the results of the import. If it exists, the lines will be appended."')
 parser.add_argument('-t', '--other-word-type',
                     choices=OTHER_WORD_TYPES,
                     help='If the word cannot be found in the grammar dictionary, imports it with this word type')
@@ -58,9 +66,13 @@ parser.add_argument('-t', '--other-word-type',
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
 if global_arguments.ask_word_continuously and global_arguments.other_word_type is not None:
-    logger.warning(
+    global_arguments.error(
         "The parameter --other-word-type can only be used when only word is imported")
-    exit(3)
+if global_arguments.input_file_path and global_arguments.output_file_path is None:
+    global_arguments.error("The parameter --output-file is missing")
+if global_arguments.input_file_path is None and global_arguments.output_file_path:
+    global_arguments.error(
+        "--output-file can only be used together with --input-file.")
 
 set_flashcard_database(global_arguments.flashcard_database)
 load_logging_configuration(debug=global_arguments.debug,
@@ -105,3 +117,31 @@ elif global_arguments.ask_word_continuously:
         if creation_result is None:
             show_word_not_found_dialog(word_to_import)
     logger.info("Exiting")
+elif global_arguments.input_file_path:
+    with open(global_arguments.input_file_path, 'r') as file, \
+            open(global_arguments.output_file_path, 'a') as output_file:
+        for line in file:
+            parsedLine = parse_line(line)
+            if parsedLine.is_comment:
+                output_file.write(f"{parsedLine.original_line}\n")
+            elif parsedLine.error:
+                output_file.write(f"# ERROR: {parsedLine.error}\n")
+                output_file.write(f"{parsedLine.original_line}\n")
+            else:
+                # Add the word or phrase to the flashcard database
+                found_word = WordFinder.find_word_with_english_translation(
+                    parsedLine.word_or_phrase,
+                    parsedLine.word_type,
+                    parsedLine.english_translation)
+                if found_word is None:
+                    output_file.write(
+                        "# ERROR: The following word wasn't found\n")
+                    output_file.write(f"{parsedLine.original_line}\n")
+                else:
+                    if not found_word.create_flashcard():
+                        output_file.write(
+                            f"# WARNING: The word {parsedLine.word_or_phrase} already has flashcards\n")
+                    else:
+                        found_word.create_flashcards_for_linked_words()
+                        logger.debug(
+                            "Flashcard for {parsedLine.word_or_phrase} and linked words were created")

@@ -20,7 +20,6 @@
 # information and stores the new word on the database with its translation
 
 import argparse
-
 import logging.config
 from tkinter import messagebox
 
@@ -55,10 +54,10 @@ exclusive_group_word_source.add_argument('-i', '--input-file',
                                          dest='input_file_path',
                                          type=str,
                                          help='A file with words to import. It must exist. Please check the file format in the documentation.')
-exclusive_group_word_source.add_argument('-o', '--output-file',
-                                         dest='output_file_path',
-                                         type=str,
-                                         help='A file where you want to store the results of the import. If it exists, the lines will be appended."')
+parser.add_argument('-o', '--output-file',
+                    dest='output_file_path',
+                    type=str,
+                    help='A file where you want to store the results of the import. If it exists, the lines will be appended."')
 parser.add_argument('-t', '--other-word-type',
                     choices=OTHER_WORD_TYPES,
                     help='If the word cannot be found in the grammar dictionary, imports it with this word type')
@@ -66,13 +65,10 @@ parser.add_argument('-t', '--other-word-type',
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
 if global_arguments.ask_word_continuously and global_arguments.other_word_type is not None:
-    global_arguments.error(
+    parser.error(
         "The parameter --other-word-type can only be used when only word is imported")
 if global_arguments.input_file_path and global_arguments.output_file_path is None:
-    global_arguments.error("The parameter --output-file is missing")
-if global_arguments.input_file_path is None and global_arguments.output_file_path:
-    global_arguments.error(
-        "--output-file can only be used together with --input-file.")
+    parser.error("The parameter --output-file is missing")
 
 set_flashcard_database(global_arguments.flashcard_database)
 load_logging_configuration(debug=global_arguments.debug,

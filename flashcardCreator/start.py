@@ -24,7 +24,8 @@ import logging.config
 from tkinter import messagebox
 
 from flashcardcreator.main import set_flashcard_database, \
-    load_logging_configuration, WordFinder, parse_line
+    load_logging_configuration, WordFinder, \
+    import_words_from_text_file
 from flashcardcreator.userinput import ask_user_for_a_word_and_a_type
 from flashcardcreator.util import OTHER_WORD_TYPES
 
@@ -84,7 +85,7 @@ def find_word_and_create_flashcards(word_to_import, other_word_type):
     """
     found_word = WordFinder.find_word_with_english_translation(word_to_import,
                                                                other_word_type)
-    if found_word is None or found_word.has_flashcards():
+    if found_word is None or found_word.exists_flashcard_for_this_word():
         return None
     if not found_word.create_flashcard():
         return False
@@ -114,33 +115,5 @@ elif global_arguments.ask_word_continuously:
             show_word_not_found_dialog(word_to_import)
     logger.info("Exiting")
 elif global_arguments.input_file_path:
-    with open(global_arguments.input_file_path, 'r') as file, \
-            open(global_arguments.output_file_path, 'a') as output_file:
-        for line in file:
-            parsedLine = parse_line(line)
-            if parsedLine.is_comment:
-                output_file.write(f"{parsedLine.original_line}")
-            elif parsedLine.error:
-                output_file.write(f"# ERROR: {parsedLine.error}\n")
-                output_file.write(f"{parsedLine.original_line}")
-            else:
-                # Add the word or phrase to the flashcard database
-                found_word = WordFinder.find_word_with_english_translation(
-                    parsedLine.word_or_phrase,
-                    parsedLine.word_type,
-                    parsedLine.translation)
-                if found_word is None:
-                    output_file.write(
-                        "# ERROR: The following word wasn't found\n")
-                    output_file.write(f"{parsedLine.original_line}")
-                elif found_word.exists_flashcard_for_this_word():
-                    output_file.write(
-                        f"# INFO: The word {parsedLine.word_or_phrase} already has flashcards\n")
-                else:
-                    if not found_word.create_flashcard():
-                        output_file.write(
-                            f"# ERROR: No flashcards were created for the word '{parsedLine.word_or_phrase}'\n")
-                    else:
-                        found_word.create_flashcards_for_linked_words()
-                        logger.debug(
-                            f"Flashcard for {parsedLine.word_or_phrase} and linked words were created")
+    import_words_from_text_file(global_arguments.input_file_path,
+                                global_arguments.output_file_path)

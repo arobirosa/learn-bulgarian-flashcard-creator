@@ -143,7 +143,7 @@ def _insert_verb(database_file, derivative_forms_to_study, root_word,
 
         # Минало несвършено време (имперфект)
         if not is_terminative and (
-                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or \
+                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or
                 'мин.несв.вр., 2л., ед.ч.' in derivative_forms_to_study_with_defaults):
             insert_verb_tense_with_cursor(db_cursor,
                                           present_singular1=root_word,
@@ -336,10 +336,10 @@ class AbstractClassifiedWord(ABC):
 
 
     def __str__(self):
-        return f"Word ID: {self.word_id}\n" \
-               f"Root Word: {self.root_word}\n" \
-               f"Word Type ID: {self.word_type_id}\n" \
-               f"Speech Part: {self.speech_part}"
+        return f"Word ID: {self._word_id}\n" \
+               f"Root Word: {self._root_word}\n" \
+               f"Word Type ID: {self._word_type_id}\n" \
+               f"Speech Part: {self._speech_part}"
 
 
     def _get_linked_words(self):
@@ -349,7 +349,7 @@ class AbstractClassifiedWord(ABC):
         """
         if not self._meaning:
             return []
-        matches = re.findall(r'\[\[([^\[\]]+)\]\]', self._meaning)
+        matches = re.findall(r'\[\[([^\[\]]+)]]', self._meaning)
         logger.debug(
             f"Extract the linked words {matches} from the meaning {self._meaning}")
         return matches
@@ -379,7 +379,6 @@ class Noun(AbstractClassifiedWord):
             'irregularDefiniteArticle': None,
             'countableEnding': None,
             'irregularPluralWithArticle': None,
-            'countableEnding': None,
             'externalWordId': self._word_id
         }
         if 'singular_definite' in derivative_forms_to_study:
@@ -728,6 +727,39 @@ def parse_line(line: str) -> ParsedLine:
                       word_type, error)
 
 
+def import_words_from_text_file(input_file_path, output_file_path):
+    with open(input_file_path, 'r') as file, \
+            open(output_file_path, 'a') as output_file:
+        for line in file:
+            current_parsed_line = parse_line(line)
+            if current_parsed_line.is_comment:
+                output_file.write(f"{current_parsed_line.original_line}")
+            elif current_parsed_line.error:
+                output_file.write(f"# ERROR: {current_parsed_line.error}\n")
+                output_file.write(f"{current_parsed_line.original_line}")
+            else:
+                # Add the word or phrase to the flashcard database
+                found_word = WordFinder.find_word_with_english_translation(
+                    current_parsed_line.word_or_phrase,
+                    current_parsed_line.word_type,
+                    current_parsed_line.translation)
+                if found_word is None:
+                    output_file.write(
+                        "# ERROR: The following word wasn't found\n")
+                    output_file.write(f"{current_parsed_line.original_line}")
+                elif found_word.exists_flashcard_for_this_word():
+                    output_file.write(
+                        f"# INFO: The word {current_parsed_line.word_or_phrase} already has flashcards\n")
+                else:
+                    if not found_word.create_flashcard():
+                        output_file.write(
+                            f"# ERROR: No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
+                    else:
+                        found_word.create_flashcards_for_linked_words()
+                        logger.debug(
+                            f"Flashcard for {current_parsed_line.word_or_phrase} and linked words were created")
+
+
 def load_logging_configuration(debug=False, verbose=False):
     if debug:
         logging_level = logging.DEBUG
@@ -738,7 +770,7 @@ def load_logging_configuration(debug=False, verbose=False):
     else:
         logging_level = logging.WARNING
     with open('conf/logging.yaml', 'r') as logging_config:
-        config_yaml = yaml.load(logging_config, Loader=yaml.FullLoader)
+        config_yaml = yaml.safe_load(logging_config)
         logging.config.dictConfig(config_yaml)
     logger.setLevel(logging_level)
     logger.debug(f"The global logging level was set to {logging_level}")

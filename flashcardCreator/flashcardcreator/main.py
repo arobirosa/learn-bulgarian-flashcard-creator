@@ -559,6 +559,8 @@ class WordFinder:
 
         if not found_classified_words:
             if other_word_type is not None:
+                logger.debug(
+                    f"The word wasn't found in the grammatical dictionary. It will be imported as {other_word_type}")
                 return WordFinder._create_classified_word_subclass(
                     None, word_to_search, None, other_word_type, None)
             else:
@@ -681,12 +683,14 @@ def parse_line(line: str) -> ParsedLine:
     :param line: Mandatory. The line to parse
     :return: ParseLine instance. Never null
     """
-    if line.trim().startswith('#') or line.trim() == '':
+    if line.strip().startswith('#') or line.strip() == '':
         return ParsedLine(line, None, None, None, None, True)
 
     translation = None
     word_type = None
-    parts = line.split('=')
+    error = None
+    # The strip removes the new line character if there is one
+    parts = line.strip().split('=')
     if len(parts) == 3:
         word_or_phrase, translation, word_type = parts
     elif len(parts) == 2:
@@ -695,6 +699,10 @@ def parse_line(line: str) -> ParsedLine:
         word_or_phrase = parts[0]
     else:
         raise ValueError(f"Invalid line format in line: {line}")
+
+    word_or_phrase = word_or_phrase.strip()
+    if translation:
+        translation = translation.strip()
 
     # Validate the line
     if re.search('[A-Za-z]', word_or_phrase):
@@ -710,7 +718,7 @@ def parse_line(line: str) -> ParsedLine:
         if len(words) > 1:
             word_type = EXPRESSION_WORD_TYPE
 
-    return ParsedLine(line, word_or_phrase.trim(), translation.trim(),
+    return ParsedLine(line, word_or_phrase, translation,
                       word_type, error)
 
 

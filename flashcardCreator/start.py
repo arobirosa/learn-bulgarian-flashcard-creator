@@ -119,20 +119,20 @@ elif global_arguments.input_file_path:
         for line in file:
             parsedLine = parse_line(line)
             if parsedLine.is_comment:
-                output_file.write(f"{parsedLine.original_line}\n")
+                output_file.write(f"{parsedLine.original_line}")
             elif parsedLine.error:
                 output_file.write(f"# ERROR: {parsedLine.error}\n")
-                output_file.write(f"{parsedLine.original_line}\n")
+                output_file.write(f"{parsedLine.original_line}")
             else:
                 # Add the word or phrase to the flashcard database
                 found_word = WordFinder.find_word_with_english_translation(
                     parsedLine.word_or_phrase,
                     parsedLine.word_type,
-                    parsedLine.english_translation)
+                    parsedLine.translation)
                 if found_word is None:
                     output_file.write(
                         "# ERROR: The following word wasn't found\n")
-                    output_file.write(f"{parsedLine.original_line}\n")
+                    output_file.write(f"{parsedLine.original_line}")
                 else:
                     if not found_word.create_flashcard():
                         output_file.write(
@@ -140,4 +140,4 @@ elif global_arguments.input_file_path:
                     else:
                         found_word.create_flashcards_for_linked_words()
                         logger.debug(
-                            "Flashcard for {parsedLine.word_or_phrase} and linked words were created")
+                            f"Flashcard for {parsedLine.word_or_phrase} and linked words were created")

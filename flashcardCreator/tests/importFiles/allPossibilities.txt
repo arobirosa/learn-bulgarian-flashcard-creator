@@ -6,8 +6,8 @@
 # after the user chooses the type of word and enters a translation
 събувам се
 събуя се
-получам
-пулуча
+получавам
+полу̀ча
 
 # Lines containing two or more words in cyrillic without counting the particle ce are imported 
 # after the user enters a translation as an **expression**

@@ -2,14 +2,14 @@
 # Use them to log clozes or other sentences which are not for the flashcard programm Anki
 # да имам социални контакти
 
-# Lines containing one word in cyrillic with or without the particle ce are imported 
+# Lines containing one word in cyrillic with or without the particle се are imported
 # after the user chooses the type of word and enters a translation
-събувам ce
-събуя ce
+събувам се
+събуя се
 получам
 пулуча
 
-# Lines containing two or more words in cyrillic without counting the particle ce are imported 
+# Lines containing two or more words in cyrillic without counting the particle се are imported
 # after the user enters a translation as an **expression**
 нещо за ядене?
 

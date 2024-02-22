@@ -276,7 +276,8 @@ class AbstractClassifiedWord(ABC):
                      word in linked_words]
         # Remove all Nones from existing words
         new_words_to_import = [classifiedWord for classifiedWord in new_words
-                               if classifiedWord]
+                               if
+                               classifiedWord and not classifiedWord.exists_flashcard_for_this_word()]
         for word_to_import in new_words_to_import:
             word_to_import.linked_word = self._root_word
             word_to_import.create_flashcard()
@@ -598,8 +599,11 @@ class WordFinder:
         word = WordFinder._find_word(word_to_search, other_word_type)
         if word is None and word_to_search.endswith(' се'):
             word = WordFinder._find_word(word_to_search[:-3], other_word_type)
-        if word is None or word.exists_flashcard_for_this_word():
+        if word is None:
             return None
+        if word.exists_flashcard_for_this_word():
+            logger.info(f"The word {word_to_search} has already flashcards")
+            return word
 
         if user_translation:
             word._final_translation = user_translation
@@ -703,6 +707,8 @@ def parse_line(line: str) -> ParsedLine:
     word_or_phrase = word_or_phrase.strip()
     if translation:
         translation = translation.strip()
+    if word_type:
+        word_type = word_type.strip().lower()
 
     # Validate the line
     if re.search('[A-Za-z]', word_or_phrase):

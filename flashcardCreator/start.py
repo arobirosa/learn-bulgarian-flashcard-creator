@@ -84,7 +84,7 @@ def find_word_and_create_flashcards(word_to_import, other_word_type):
     """
     found_word = WordFinder.find_word_with_english_translation(word_to_import,
                                                                other_word_type)
-    if found_word is None:
+    if found_word is None or found_word.has_flashcards():
         return None
     if not found_word.create_flashcard():
         return False
@@ -133,10 +133,13 @@ elif global_arguments.input_file_path:
                     output_file.write(
                         "# ERROR: The following word wasn't found\n")
                     output_file.write(f"{parsedLine.original_line}")
+                elif found_word.exists_flashcard_for_this_word():
+                    output_file.write(
+                        f"# INFO: The word {parsedLine.word_or_phrase} already has flashcards\n")
                 else:
                     if not found_word.create_flashcard():
                         output_file.write(
-                            f"# WARNING: The word {parsedLine.word_or_phrase} already has flashcards\n")
+                            f"# ERROR: No flashcards were created for the word '{parsedLine.word_or_phrase}'\n")
                     else:
                         found_word.create_flashcards_for_linked_words()
                         logger.debug(

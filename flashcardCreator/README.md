@@ -44,6 +44,17 @@ TODO To complete this section
 
 Yes, please create a feature request explaining what are the advantages over DeepL and PONS. If I have time, I will do the connection
 
+* What is imported if a verb has a particple with multiple derivative forms like 'завалял'?
+
+When having something like:
+```
+{'мин.деят.св.прич. м.р.': 'завалял', 
+    'мин.деят.св.прич. мн.ч.': 'завалели', 
+    'мин.деят.несв.прич. м.р.': 'завалял'}
+```
+The duplicated participles are combined and imported like this:
+![particles With Multiple Derivate Forms Combination.jpg](docs/img/particlesWithMultipleDerivateFormsCombination.jpg)
+
 ## Troubleshooting
 
 TODO To complete this section

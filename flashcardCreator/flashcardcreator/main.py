@@ -41,6 +41,7 @@ from flashcardcreator.translator import translate_text_to_english
 from flashcardcreator.util import OTHER_WORD_TYPES, EXPRESSION_WORD_TYPE
 
 ERROR_PREFIX = "# ERROR: "
+WARNING_PREFIX = "# INFO: "
 INFO_PREFIX = "# INFO: "
 CONFIG_FILENAME = 'configuration.ini'
 
@@ -276,10 +277,14 @@ class AbstractClassifiedWord(ABC):
         new_words = [WordFinder.find_word_with_english_translation(word, None)
                      for
                      word in linked_words]
+        logger.debug(
+            f"Creating flashcards for the linked words {new_words}")
         # Remove all Nones from existing words
         new_words_to_import = [classifiedWord for classifiedWord in new_words
                                if
                                classifiedWord and not classifiedWord.exists_flashcard_for_this_word()]
+        logger.debug(
+            f"Creating flashcards for the linked non-existent words {new_words}")
         for word_to_import in new_words_to_import:
             word_to_import.linked_word = self._root_word
             word_to_import.create_flashcard()
@@ -314,6 +319,8 @@ class AbstractClassifiedWord(ABC):
                 f"The word {self._root_word} hasn''t got any translations")
             return False
 
+        logger.debug(
+            f"Creating flashcards for the word {self._root_word}")
         # If the word is irregular, keep only what is important to study
         all_derivative_forms = self._calculate_derivative_forms()
         derivative_forms_to_study = {}
@@ -736,6 +743,8 @@ def import_words_from_text_file(input_file_path, output_file_path):
             current_parsed_line = parse_line(line)
             # Exclude old errors, warnings or info messages
             if current_parsed_line.original_line.startswith(ERROR_PREFIX) or \
+                    current_parsed_line.original_line.startswith(
+                        WARNING_PREFIX) or \
                     current_parsed_line.original_line.startswith(INFO_PREFIX):
                 continue
             elif current_parsed_line.is_comment:
@@ -756,11 +765,11 @@ def import_words_from_text_file(input_file_path, output_file_path):
                     output_file.write(f"{current_parsed_line.original_line}")
                 elif found_word.exists_flashcard_for_this_word():
                     output_file.write(
-                        f"{INFO_PREFIX}The word {current_parsed_line.word_or_phrase} already has flashcards\n")
+                        f"{INFO_PREFIX}The word '{current_parsed_line.word_or_phrase}' already has flashcards\n")
                 else:
                     if not found_word.create_flashcard():
                         output_file.write(
-                            f"{ERROR_PREFIX}No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
+                            f"{WARNING_PREFIX}No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
                     else:
                         found_word.create_flashcards_for_linked_words()
                         logger.debug(

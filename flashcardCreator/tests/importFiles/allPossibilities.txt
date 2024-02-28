@@ -31,9 +31,9 @@
 #			word to import in cyrillic = translation = word type
 # Word type can be one of the following:
 #	expression
-#	abreviation
+#	abbreviation
 #	adverb
-#	conjuntion
+#	conjunction
 # 	geographical
 #	idiom
 #	interjection

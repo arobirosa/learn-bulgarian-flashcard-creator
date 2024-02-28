@@ -21,8 +21,8 @@ import os
 import logging
 
 EXPRESSION_WORD_TYPE = 'expression'
-OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abreviation', 'adverb',
-                    'conjuntion',
+OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abbreviation', 'adverb',
+                    'conjunction',
                     'geographical', 'idiom',
                     'interjection', 'math',
                     'name_bg-place',

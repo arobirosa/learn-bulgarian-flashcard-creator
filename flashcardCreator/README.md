@@ -1,6 +1,6 @@
 # About the project
 
-This tool will help you learn Bulgarian more efficiently saving you time and effort.
+This tool will help you learn Bulgarian more efficiently saving you time and effort. It only generates flashcards for the irregular forms of the words.
 
 ## Goals and Motivation
 
@@ -20,7 +20,7 @@ You can study your own vocabulary with your own English translations using [Anki
 ## Limitations
 
 * Only irregular forms which are in the [grammar dictionary](https://rechnik.chitanka.info/w) are identified
-* You have to enter your own vocabulary. If you want to spare time by creating the deck, you can use [Ankiweb's decks with Bulgarian vocabulary](https://ankiweb.net/shared/decks?search=bulgarian)
+* You have to enter your own vocabulary. If you want to spare time by using my flashcards, you can use [Ankiweb's decks with Bulgarian vocabulary](https://ankiweb.net/shared/decks?search=bulgarian)
 
 # Getting stated
 
@@ -44,6 +44,17 @@ TODO To complete this section
 
 Yes, please create a feature request explaining what are the advantages over DeepL and PONS. If I have time, I will do the connection
 
+* What is imported if a verb has a particple with multiple derivative forms like 'завалял'?
+
+When having something like:
+```
+{'мин.деят.св.прич. м.р.': 'завалял', 
+    'мин.деят.св.прич. мн.ч.': 'завалели', 
+    'мин.деят.несв.прич. м.р.': 'завалял'}
+```
+The duplicated participles are combined and imported like this:
+![particles With Multiple Derivate Forms Combination.jpg](docs/img/particlesWithMultipleDerivateFormsCombination.jpg)
+
 ## Troubleshooting
 
 TODO To complete this section
@@ -60,20 +71,6 @@ TODO To complete this section
 
 TODO To complete this section
 
-# Roadmap
 
-You will find all open tasks on the issues tab of this project.
-
-# Definition of Done
-
-* Code compiles 
-* The change was tested 
-* The new tests are meaningful 
-* TODO No PMD, Findbugs or Checkstyle violation (tested by ant qa)
-* TODO All old tests are working (tested by ant qa)
-* TODO The test coverage is equal or higher to 75% of the lines (tested by ant qa)
-* Code is committed in the Github repository and no files or changes are missing
-* The feature is documented on this file or the wiki
-* The ticket is closed
 
 

@@ -22,6 +22,11 @@ import sqlite3
 import logging
 from flashcardcreator.util import convert_to_absolute_path
 
+SQL_INSERT_OTHER_WORD = '''
+    insert into otherWordTypes (word, meaningInEnglish, type, externalWordId)
+    values (:word, :meaningInEnglish, :type, :externalWordId);
+    '''
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,19 +84,28 @@ def insert_verb_meaning_with_cursor(db_cursor, meaning_in_english,
 
 
 def insert_other_word_type_with_cursor(db_cursor, word_fields):
-    db_cursor.execute('''
-        insert into otherWordTypes (word, meaningInEnglish, type, externalWordId)
-        values (:word, :meaningInEnglish, :type, :externalWordId);
-        ''', word_fields)
+    db_cursor.execute(
+        SQL_INSERT_OTHER_WORD,
+        word_fields)
 
 
 def insert_participles_with_cursor(db_cursor, verb_participles,
                                    final_translation, word_id):
-    for participle_name, derivative_form in verb_participles.items():
+    unique_verb_participles = {}
+    for derivative_form, participle_name in verb_participles.items():
+        # If the same particle has two forms, combine them
+        if participle_name in unique_verb_participles:
+            unique_verb_participles[participle_name] = derivative_form + ", " + \
+                                                       unique_verb_participles[
+                                                           participle_name]
+        else:
+            unique_verb_participles[participle_name] = derivative_form
+
+    for participle_name, derivative_form in unique_verb_participles.items():
         word_fields = {
-            'word': derivative_form,
+            'word': participle_name,
             'meaningInEnglish': final_translation,
-            'type': participle_name,
+            'type': derivative_form,
             'externalWordId': word_id
         }
         insert_other_word_type_with_cursor(db_cursor, word_fields)

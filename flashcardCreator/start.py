@@ -20,13 +20,14 @@
 # information and stores the new word on the database with its translation
 
 import argparse
-
 import logging.config
-import tkinter as tk
-from tkinter import simpledialog, messagebox
+from tkinter import messagebox
 
 from flashcardcreator.main import set_flashcard_database, \
-    load_logging_configuration, WordFinder
+    load_logging_configuration, WordFinder, \
+    import_words_from_text_file
+from flashcardcreator.userinput import ask_user_for_a_word_and_a_type
+from flashcardcreator.util import OTHER_WORD_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -50,30 +51,25 @@ exclusive_group_word_source.add_argument('-a', '--ask-word-continuously',
 exclusive_group_word_source.add_argument('-w', '--word', dest='word_to_import',
                                          metavar='WORD',
                                          help='One word as parameter in the command line')
+exclusive_group_word_source.add_argument('-i', '--input-file',
+                                         dest='input_file_path',
+                                         type=str,
+                                         help='A file with words to import. It must exist. Please check the file format in the documentation.')
+parser.add_argument('-o', '--output-file',
+                    dest='output_file_path',
+                    type=str,
+                    help='A file where you want to store the results of the import. If it exists, the lines will be appended."')
 parser.add_argument('-t', '--other-word-type',
-                    choices=['abreviation', 'adjective', 'adverb',
-                             'conjuntion', 'expression',
-                             'geographical', 'idiom',
-                             'interjection', 'math',
-                             'name_bg-place',
-                             'name_bg-various',
-                             'name_capital', 'name_city',
-                             'name_country',
-                             'name_popular',
-                             'name_various',
-                             'noun_plurale-tantum',
-                             'numeral', 'particle',
-                             'phrase', 'plural', 'prefix',
-                             'preposition',
-                             'suffix'],
+                    choices=OTHER_WORD_TYPES,
                     help='If the word cannot be found in the grammar dictionary, imports it with this word type')
 
 global_arguments = parser.parse_args()
 logger.debug(f'Received parameters: {global_arguments}')
 if global_arguments.ask_word_continuously and global_arguments.other_word_type is not None:
-    logger.warning(
+    parser.error(
         "The parameter --other-word-type can only be used when only word is imported")
-    exit(3)
+if global_arguments.input_file_path and global_arguments.output_file_path is None:
+    parser.error("The parameter --output-file is missing")
 
 set_flashcard_database(global_arguments.flashcard_database)
 load_logging_configuration(debug=global_arguments.debug,
@@ -89,7 +85,7 @@ def find_word_and_create_flashcards(word_to_import, other_word_type):
     """
     found_word = WordFinder.find_word_with_english_translation(word_to_import,
                                                                other_word_type)
-    if found_word is None:
+    if found_word is None or found_word.exists_flashcard_for_this_word():
         return None
     if not found_word.create_flashcard():
         return False
@@ -107,15 +103,17 @@ if global_arguments.word_to_import:
                                     global_arguments.other_word_type)
 elif global_arguments.ask_word_continuously:
     while True:
-        root = tk.Tk()
-        root.withdraw()  # Hide the main window
-        word_to_import = simpledialog.askstring("Flash card creator",
-                                                'Please write the word to import')
-        if not word_to_import:
+        result_tuple = ask_user_for_a_word_and_a_type()
+        if not result_tuple:
             logger.info("The user wants to exit")
             break
+        word_to_import, word_type = result_tuple
         logger.debug(f'The user entered the word {word_to_import}')
-        creation_result = find_word_and_create_flashcards(word_to_import, None)
+        creation_result = find_word_and_create_flashcards(word_to_import,
+                                                          word_type)
         if creation_result is None:
             show_word_not_found_dialog(word_to_import)
     logger.info("Exiting")
+elif global_arguments.input_file_path:
+    import_words_from_text_file(global_arguments.input_file_path,
+                                global_arguments.output_file_path)

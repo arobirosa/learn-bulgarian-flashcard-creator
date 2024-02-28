@@ -38,7 +38,11 @@ from flashcardcreator.database import insert_noun, insert_adjective, \
     insert_verb_meaning_with_cursor, insert_verb_tense_with_cursor, \
     verb_pair_not_exists, verb_pair_insert
 from flashcardcreator.translator import translate_text_to_english
+from flashcardcreator.util import OTHER_WORD_TYPES, EXPRESSION_WORD_TYPE
 
+ERROR_PREFIX = "# ERROR: "
+WARNING_PREFIX = "# INFO: "
+INFO_PREFIX = "# INFO: "
 CONFIG_FILENAME = 'configuration.ini'
 
 CYRILLIC_LETTERS_LOWER_UPPER_CASE_PAIRS = [
@@ -142,7 +146,7 @@ def _insert_verb(database_file, derivative_forms_to_study, root_word,
 
         # Минало несвършено време (имперфект)
         if not is_terminative and (
-                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or \
+                'мин.несв.вр., 1л., ед.ч.' in derivative_forms_to_study_with_defaults or
                 'мин.несв.вр., 2л., ед.ч.' in derivative_forms_to_study_with_defaults):
             insert_verb_tense_with_cursor(db_cursor,
                                           present_singular1=root_word,
@@ -231,7 +235,7 @@ class AbstractClassifiedWord(ABC):
         ''', word_search_parameters)
 
         if found_flashcards:
-            logger.warning(
+            logger.info(
                 f'The word {self._root_word} has already flash cards')
             return True
         else:
@@ -273,9 +277,14 @@ class AbstractClassifiedWord(ABC):
         new_words = [WordFinder.find_word_with_english_translation(word, None)
                      for
                      word in linked_words]
+        logger.debug(
+            f"Creating flashcards for the linked words {new_words}")
         # Remove all Nones from existing words
         new_words_to_import = [classifiedWord for classifiedWord in new_words
-                               if classifiedWord]
+                               if
+                               classifiedWord and not classifiedWord.exists_flashcard_for_this_word()]
+        logger.debug(
+            f"Creating flashcards for the linked non-existent words {new_words}")
         for word_to_import in new_words_to_import:
             word_to_import.linked_word = self._root_word
             word_to_import.create_flashcard()
@@ -310,6 +319,8 @@ class AbstractClassifiedWord(ABC):
                 f"The word {self._root_word} hasn''t got any translations")
             return False
 
+        logger.debug(
+            f"Creating flashcards for the word {self._root_word}")
         # If the word is irregular, keep only what is important to study
         all_derivative_forms = self._calculate_derivative_forms()
         derivative_forms_to_study = {}
@@ -334,10 +345,10 @@ class AbstractClassifiedWord(ABC):
 
 
     def __str__(self):
-        return f"Word ID: {self.word_id}\n" \
-               f"Root Word: {self.root_word}\n" \
-               f"Word Type ID: {self.word_type_id}\n" \
-               f"Speech Part: {self.speech_part}"
+        return f"Word ID: {self._word_id}\n" \
+               f"Root Word: {self._root_word}\n" \
+               f"Word Type ID: {self._word_type_id}\n" \
+               f"Speech Part: {self._speech_part}"
 
 
     def _get_linked_words(self):
@@ -347,7 +358,7 @@ class AbstractClassifiedWord(ABC):
         """
         if not self._meaning:
             return []
-        matches = re.findall(r'\[\[([^\[\]]+)\]\]', self._meaning)
+        matches = re.findall(r'\[\[([^\[\]]+)]]', self._meaning)
         logger.debug(
             f"Extract the linked words {matches} from the meaning {self._meaning}")
         return matches
@@ -377,7 +388,6 @@ class Noun(AbstractClassifiedWord):
             'irregularDefiniteArticle': None,
             'countableEnding': None,
             'irregularPluralWithArticle': None,
-            'countableEnding': None,
             'externalWordId': self._word_id
         }
         if 'singular_definite' in derivative_forms_to_study:
@@ -558,6 +568,8 @@ class WordFinder:
 
         if not found_classified_words:
             if other_word_type is not None:
+                logger.debug(
+                    f"The word wasn't found in the grammatical dictionary. It will be imported as {other_word_type}")
                 return WordFinder._create_classified_word_subclass(
                     None, word_to_search, None, other_word_type, None)
             else:
@@ -580,22 +592,30 @@ class WordFinder:
 
     @staticmethod
     def find_word_with_english_translation(word_to_search: str,
-                                           other_word_type):
+                                           other_word_type,
+                                           user_translation: str = None) -> AbstractClassifiedWord:
         """
         Normalizes the given word and searches for its word type and derivation rules. Ask
         the user to confirm the translation in English
         If multiple words are found, the user will be prompted to choose one.
         :param word_to_search: Word to search for. It will be converted to the case required by the grammar dictionary
         :param other_word_type: Type of the word if it isn't found in the grammar dictionary
+        :param user_translation: Optional. Translation given by the user
         :return:
         :rtype: None or a AbstractClassifiedWord
         """
         word = WordFinder._find_word(word_to_search, other_word_type)
         if word is None and word_to_search.endswith(' се'):
-            word = WordFinder._find_word(word_to_search[:-3])
-        if word is None or word.exists_flashcard_for_this_word():
+            word = WordFinder._find_word(word_to_search[:-3], other_word_type)
+        if word is None:
             return None
-        if not word.ask_user_for_final_translation():
+        if word.exists_flashcard_for_this_word():
+            logger.info(f"The word {word_to_search} has already flashcards")
+            return word
+
+        if user_translation:
+            word._final_translation = user_translation
+        elif not word.ask_user_for_final_translation():
             return None
         return word
 
@@ -643,6 +663,119 @@ class WordFinder:
                     f"The speech part {speech_part} isn't supported.")
 
 
+class ParsedLine:
+    def __init__(self, original_line, word_or_phrase, translation=None,
+                 word_type=None,
+                 error=None, is_comment=False):
+        self.original_line = original_line
+        self.word_or_phrase = word_or_phrase
+        self.translation = translation
+        self._word_type = word_type
+        self.error = error
+        self.is_comment = is_comment
+
+
+    @property
+    def word_type(self):
+        return self._word_type
+
+
+    @word_type.setter
+    def word_type(self, value):
+        if value not in OTHER_WORD_TYPES:
+            self.error = f"Invalid word type. Must be one of {OTHER_WORD_TYPES}."
+        else:
+            self._word_type = value
+
+
+def parse_line(line: str) -> ParsedLine:
+    """
+    Parses a line from the input file and returns a ParsedLine instance with
+    the word or phrase and optionally an error message, translation and a word type.
+    :param line: Mandatory. The line to parse
+    :return: ParseLine instance. Never null
+    """
+    if line.strip().startswith('#') or line.strip() == '':
+        return ParsedLine(line, None, None, None, None, True)
+
+    translation = None
+    word_type = None
+    error = None
+    # The strip removes the new line character if there is one
+    parts = line.strip().split('=')
+    if len(parts) == 3:
+        word_or_phrase, translation, word_type = parts
+    elif len(parts) == 2:
+        word_or_phrase, translation = parts
+    elif len(parts) == 1:
+        word_or_phrase = parts[0]
+    else:
+        raise ValueError(f"Invalid line format in line: {line}")
+
+    word_or_phrase = word_or_phrase.strip()
+    if translation:
+        translation = translation.strip()
+    if word_type:
+        word_type = word_type.strip().lower()
+
+    # Validate the line
+    if re.search('[A-Za-z]', word_or_phrase):
+        error = f"The word or phrase '{word_or_phrase}' contains Latin characters"
+    elif word_type is None:
+        # Count the number of words in the phrase without the particle "се"
+        words = word_or_phrase.split(' ')
+        if len(words) > 1 and words[-1] == 'се':
+            words = words[:-1]
+        if len(words) > 1 and words[0] == 'се':
+            words = words[1:]
+        logger.debug(f"Found words in the line {words}")
+        if len(words) > 1:
+            word_type = EXPRESSION_WORD_TYPE
+
+    return ParsedLine(line, word_or_phrase, translation,
+                      word_type, error)
+
+
+def import_words_from_text_file(input_file_path, output_file_path):
+    with open(input_file_path, 'r') as file, \
+            open(output_file_path, 'a') as output_file:
+        for line in file:
+            current_parsed_line = parse_line(line)
+            # Exclude old errors, warnings or info messages
+            if current_parsed_line.original_line.startswith(ERROR_PREFIX) or \
+                    current_parsed_line.original_line.startswith(
+                        WARNING_PREFIX) or \
+                    current_parsed_line.original_line.startswith(INFO_PREFIX):
+                continue
+            elif current_parsed_line.is_comment:
+                output_file.write(f"{current_parsed_line.original_line}")
+            elif current_parsed_line.error:
+                output_file.write(
+                    f"{ERROR_PREFIX}{current_parsed_line.error}\n")
+                output_file.write(f"{current_parsed_line.original_line}")
+            else:
+                # Add the word or phrase to the flashcard database
+                found_word = WordFinder.find_word_with_english_translation(
+                    current_parsed_line.word_or_phrase,
+                    current_parsed_line.word_type,
+                    current_parsed_line.translation)
+                if found_word is None:
+                    output_file.write(
+                        f"{ERROR_PREFIX}The following word wasn't found\n")
+                    output_file.write(f"{current_parsed_line.original_line}")
+                elif found_word.exists_flashcard_for_this_word():
+                    output_file.write(
+                        f"{INFO_PREFIX}The word '{current_parsed_line.word_or_phrase}' already has flashcards\n")
+                else:
+                    if not found_word.create_flashcard():
+                        output_file.write(
+                            f"{WARNING_PREFIX}No flashcards were created for the word '{current_parsed_line.word_or_phrase}'\n")
+                    else:
+                        found_word.create_flashcards_for_linked_words()
+                        logger.debug(
+                            f"Flashcard for {current_parsed_line.word_or_phrase} and linked words were created")
+
+
 def load_logging_configuration(debug=False, verbose=False):
     if debug:
         logging_level = logging.DEBUG
@@ -653,7 +786,7 @@ def load_logging_configuration(debug=False, verbose=False):
     else:
         logging_level = logging.WARNING
     with open('conf/logging.yaml', 'r') as logging_config:
-        config_yaml = yaml.load(logging_config, Loader=yaml.FullLoader)
+        config_yaml = yaml.safe_load(logging_config)
         logging.config.dictConfig(config_yaml)
     logger.setLevel(logging_level)
     logger.debug(f"The global logging level was set to {logging_level}")

@@ -1,0 +1,17 @@
+# Lines starting with # are comments and won't be imported.
+# INFO: The word жестовете already has flashcards
+# INFO: The word изразяват емоцият already has flashcards
+# INFO: The word прибирам се already has flashcards
+# INFO: The word прибирам already has flashcards
+
+# In lines containing two equal sings, the last column indicates the type of the word
+# Format:
+#			word to import in cyrillic = translation = word type
+# INFO: The word Къде мога да го заредя? already has flashcards
+# INFO: The word боя за коза already has flashcards
+# ERROR: The word or phrase 'Montenegro' contains Latin characters
+Montenegro
+# ERROR: The word or phrase 'Croacia' contains Latin characters
+Croacia
+# ERROR: The word or phrase 'разбира ce' contains Latin characters
+разбира ce

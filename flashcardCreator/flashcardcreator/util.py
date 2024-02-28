@@ -20,7 +20,25 @@
 import os
 import logging
 
+EXPRESSION_WORD_TYPE = 'expression'
+OTHER_WORD_TYPES = [EXPRESSION_WORD_TYPE, 'abbreviation', 'adverb',
+                    'conjunction',
+                    'geographical', 'idiom',
+                    'interjection', 'math',
+                    'name_bg-place',
+                    'name_bg-various',
+                    'name_capital', 'name_city',
+                    'name_country',
+                    'name_popular',
+                    'name_various',
+                    'noun_plurale-tantum',
+                    'numeral', 'particle',
+                    'phrase', 'plural', 'prefix',
+                    'preposition',
+                    'suffix']
+
 logger = logging.getLogger(__name__)
+
 
 def convert_to_absolute_path(relative_file):
     current_script_directory = os.path.dirname(os.path.abspath(__file__))

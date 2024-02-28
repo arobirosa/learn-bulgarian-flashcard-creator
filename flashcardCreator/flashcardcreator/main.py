@@ -235,7 +235,7 @@ class AbstractClassifiedWord(ABC):
         ''', word_search_parameters)
 
         if found_flashcards:
-            logger.warning(
+            logger.info(
                 f'The word {self._root_word} has already flash cards')
             return True
         else:

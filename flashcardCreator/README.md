@@ -20,7 +20,7 @@ You can study your own vocabulary with your own English translations using [Anki
 ## Limitations
 
 * Only irregular forms which are in the [grammar dictionary](https://rechnik.chitanka.info/w) are identified
-* You have to enter your own vocabulary. If you want to spare time by creating the deck, you can use [Ankiweb's decks with Bulgarian vocabulary](https://ankiweb.net/shared/decks?search=bulgarian)
+* You have to enter your own vocabulary. If you want to spare time by using my flashcards, you can use [Ankiweb's decks with Bulgarian vocabulary](https://ankiweb.net/shared/decks?search=bulgarian)
 
 # Getting stated
 

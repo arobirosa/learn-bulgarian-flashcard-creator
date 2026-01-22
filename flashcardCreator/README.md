@@ -24,8 +24,6 @@ You can study your own vocabulary with your own English translations using [Anki
 
 # Getting stated
 
-TODO To complete this section
-
 ## Installation
 
 On the terminal window, create a virtual environment and install the dependencies:
@@ -64,7 +62,7 @@ TODO Add use cases using a list of words from a file, a single word from the com
 
 Yes, please create a feature request explaining what are the advantages over DeepL and PONS. If I have time, I will do the connection
 
-* What is imported if a verb has a particple with multiple derivative forms like 'завалял'?
+* What is imported if a verb has a participle with multiple derivative forms like 'завалял'?
 
 When having something like:
 ```

@@ -28,13 +28,33 @@ TODO To complete this section
 
 ## Installation
 
-Please run the script installDictionary.py to create a local copy of the grammatical classification of the words
+On the terminal window, create a virtual environment and install the dependencies:
 
-TODO Automatize this step
+```bash
+cd flashcardCreator
+python3 -m venv .venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Please run the script installDictionary.py to create a local copy of the grammatical classification of the words:
+
+```bash
+python installDictionary.py
+```
 
 ## Configuration
 
-TODO To complete this section
+Create a new configuration file based on the template. You need to enter your DeepL API key to be able to search for translations in English.
+```
+cp apiKeys.ini.template apiKeys.ini
+```
+
+## Usage
+
+Now you are ready to create your own flashcards. 
+
+TODO Add use cases using a list of words from a file, a single word from the command line, and adding multiple words interactively
 
 # Help
 
@@ -71,6 +91,10 @@ TODO To complete this section
 
 TODO To complete this section
 
+# How to regerate the dependencies file
 
+If you add new dependencies to the project, please regenerate the requirements.txt file using pip freeze:
 
-
+```bash
+pip freeze > requirements.txt
+```

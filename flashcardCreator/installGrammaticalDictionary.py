@@ -28,7 +28,7 @@ from os.path import exists
 
 # The database file located at https://rechnik.chitanka.info/db.sql.gz can only be downloaded with an interactive browser.
 # It moved it to my own hosting. It has the GPL 2 license
-GRAMMATICAL_DATABASE_URL = 'https://files.areko.consulting/rechnik.chitanka.info.bulgarian.db.sqlite.gz'
+GRAMMATICAL_DATABASE_URL = 'https://cloud.arobirosa.com/public.php/dav/files/zNKgEQqk28ae4E9/?accept=zip'
 GRAMMATICAL_DATABASE_LOCAL_FILENAME = 'data/grammatical_dictionary.db'
 
 
@@ -65,14 +65,6 @@ def download_import_grammar_database():
         return True
 
     print('Downloading the database with the grammatical classification')
-    auth_handler = urllib.request.HTTPBasicAuthHandler()
-    # TODO Remove credentials from code and change them on server
-    auth_handler.add_password(realm='please enter user and password',
-                              uri='https://files.areko.consulting',
-                              user='reader',
-                              passwd='DQaGtM6LK3VNXras')
-    opener = urllib.request.build_opener(auth_handler)
-    urllib.request.install_opener(opener)
 
     with urllib.request.urlopen(GRAMMATICAL_DATABASE_URL) as url_downloader_response, gzip.GzipFile(fileobj=url_downloader_response) as compressed_file:
         print(f'Downloading {GRAMMATICAL_DATABASE_URL}. Please wait 3-5 minutes')

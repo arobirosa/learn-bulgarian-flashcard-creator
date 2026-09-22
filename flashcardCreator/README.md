@@ -39,7 +39,7 @@ pip install -r requirements.txt
 Please run the script installDictionary.py to create a local copy of the grammatical classification of the words:
 
 ```bash
-python installDictionary.py
+python3 installGrammaticalDictionary.py 
 ```
 
 ## Configuration

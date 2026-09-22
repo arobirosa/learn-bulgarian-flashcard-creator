@@ -161,3 +161,4 @@ cython_debug/
 **/.idea/sonarlint/securityhotspotstore/
 **/.idea/sonarlint/issuestore/
 flashcardCreator/apiKeys.ini
+.aider.*

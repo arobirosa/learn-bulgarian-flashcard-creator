@@ -53,16 +53,21 @@ cp apiKeys.ini.template apiKeys.ini
 
 Now you are ready to create your own flashcards. 
 
-### Add one work at the type
+Add many words typing them:
+```
+python start.py --verbose --ask-word-continuously
+```
+
+To add words from a file:
 
 ```
-python start.py -v -a
+python start.py --verbose ---input-file newWords.txt
 ```
 
-TODO Add use cases using a list of words from a file, a single word from the command line, and adding multiple words interactively
+To only add one word:
 
 ```
-cp apiKeys.ini.template apiKeys.ini
+python start.py --verbose --word познавам 
 ```
 
 # Help

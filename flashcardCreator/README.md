@@ -4,7 +4,8 @@ This tool will help you learn Bulgarian more efficiently saving you time and eff
 
 ## Goals and Motivation
 
-TODO To complete this section
+- To provide a tool to learn the complexity of the Bulgarian verbs focussing on the irregular ones
+- To allow any person to learn Bulgarian with their own handpicked vocabulary
 
 ## Advantages
 
@@ -31,7 +32,7 @@ On the terminal window, create a virtual environment and install the dependencie
 ```bash
 cd flashcardCreator
 python3 -m venv .venv
-source venv/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -52,7 +53,17 @@ cp apiKeys.ini.template apiKeys.ini
 
 Now you are ready to create your own flashcards. 
 
+### Add one work at the type
+
+```
+python start.py -v -a
+```
+
 TODO Add use cases using a list of words from a file, a single word from the command line, and adding multiple words interactively
+
+```
+cp apiKeys.ini.template apiKeys.ini
+```
 
 # Help
 
